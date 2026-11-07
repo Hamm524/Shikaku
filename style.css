@@ -190,3 +190,5 @@ textarea.mono, .codeans { font-family: ui-monospace, "SF Mono", Menlo, Consolas,
 .lv-b{background:rgba(120,120,120,.18);color:#666}.lv-x{background:rgba(217,160,43,.2);color:#9a6a00}.lv-e{background:rgba(214,69,69,.14);color:#b33}
 .lvnote{font-size:.85em;padding:8px 12px;border-radius:8px;margin:6px 0;background:rgba(15,107,102,.08)}.lvnote.lv-b{background:rgba(120,120,120,.1)}.lvnote.lv-x{background:rgba(217,160,43,.12)}.lvnote.lv-e{background:rgba(214,69,69,.08)}
 @media (prefers-color-scheme:dark){.lv-b{color:#bbb}.lv-x{color:#e8b94a}.lv-e{color:#f08080}.lv{color:#5fd0c8}}
+
+.gist h2{margin:2px 0}.gist h3{font-size:.95em;margin:12px 0 2px}.gist ul{margin:2px 0;padding-left:1.3em;line-height:1.7}.gist li{margin:2px 0}.gist p{line-height:1.7;margin:2px 0}
