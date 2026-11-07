@@ -185,3 +185,8 @@ textarea.mono, .codeans { font-family: ui-monospace, "SF Mono", Menlo, Consolas,
 .ptlab{display:flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}.ptin{width:64px;font:inherit;padding:8px;border:1px solid var(--line,#ccc);border-radius:8px;background:transparent;color:inherit;text-align:right}
 
 .trap{margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(217,160,43,.12);border-left:4px solid #d9a02b;font-size:.92em;line-height:1.7}.trap b{display:block;margin-bottom:2px}.trap.miss{background:rgba(214,69,69,.1);border-left-color:#d64545}
+
+.lv{font-style:normal;font-size:.72em;font-weight:700;padding:2px 7px;border-radius:99px;margin-right:6px;vertical-align:middle;background:rgba(15,107,102,.14);color:#0f6b66}
+.lv-b{background:rgba(120,120,120,.18);color:#666}.lv-x{background:rgba(217,160,43,.2);color:#9a6a00}.lv-e{background:rgba(214,69,69,.14);color:#b33}
+.lvnote{font-size:.85em;padding:8px 12px;border-radius:8px;margin:6px 0;background:rgba(15,107,102,.08)}.lvnote.lv-b{background:rgba(120,120,120,.1)}.lvnote.lv-x{background:rgba(217,160,43,.12)}.lvnote.lv-e{background:rgba(214,69,69,.08)}
+@media (prefers-color-scheme:dark){.lv-b{color:#bbb}.lv-x{color:#e8b94a}.lv-e{color:#f08080}.lv{color:#5fd0c8}}
