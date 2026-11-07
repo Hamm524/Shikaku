@@ -8,9 +8,9 @@
 - パソコンではキーボードでも操作できる(1〜4で選択、Enterで答え、o/xで採点、←→で移動)。
 
 ## 構成
-- `index.html` / `app.js` / `style.css` … アプリ本体
-- `subjects/boki/` `subjects/itpass/` `subjects/html5/` … 科目ごとのフォルダ。問題データは各フォルダの `units.js`
-- `sw.js` `manifest.webmanifest` … ホーム画面追加と、オフラインでの表示
+- `app.js` / `style.css` / `sw.js` … 3科目で共通のアプリ本体
+- `boki/` `itpass/` `html5/` … 科目ごとのフォルダ。それぞれが独立したURL(例: `/Shikaku/boki/`)で、各フォルダに `index.html`・`units.js`(問題データ)・`manifest.webmanifest`・アイコンがある
+- ルートの `index.html` … 3科目をまとめて見られるページ(`/Shikaku/`)
 
 ## 公開
 GitHub Pages(Settings → Pages → Branch: main / root)。

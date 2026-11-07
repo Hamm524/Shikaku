@@ -2,11 +2,13 @@
    記録は端末と、合言葉(10文字)で Firebase に自動保存する。ログインは不要。 */
 
 /* ---------- 科目とデータ ---------- */
+var ONLY = window.ONLY || "";
 var SUBJECTS = [
-  { id: "boki", name: "日商簿記2級", short: "簿記", units: BOKI, def: "2026-12-18" },
-  { id: "itpass", name: "ITパスポート", short: "ITパス", units: ITPASS, note: "いまの問題はサンプルです。順に増やします。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル2", short: "HTML5", units: HTML5, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
-];
+  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18" },
+  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "いまの問題はサンプルです。順に増やします。" },
+  { id: "html5", name: "HTML5プロフェッショナル レベル2", short: "HTML5", title: "HTML5ドリル", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
+var ROOT = ONLY ? "../" : "";
 var UNITS = [];
 SUBJECTS.forEach(function (s) { s.units.forEach(function (u) { u.subj = s.id; u.dm = u.dm || 5; UNITS.push(u); }); });
 function subjById(id) { return SUBJECTS.filter(function (s) { return s.id === id; })[0] || SUBJECTS[0]; }
@@ -71,7 +73,7 @@ function fsPut(code, obj) {
 }
 function setState(s) { cloud.state = s; var el = document.getElementById("cstat"); if (el) el.textContent = stateText(); }
 function stateText() {
-  return cloud.state === "ok" ? "☁ 自動で保存中" : cloud.state === "sync" ? "☁ 保存しています…" : cloud.state === "err" ? "☁ 保存できません" + (cloud.err ? "(" + cloud.err + ")" : "") + "。この端末には保存済み" : "☁ 準備中";
+  return cloud.state === "ok" ? "☁ 自動で保存中" : cloud.state === "sync" ? "☁ 保存しています…" : cloud.state === "err" ? "☁ 保存できません" + (cloud.err ? "(" + cloud.err.replace("fs ", "") + ")" : "") : "☁ 準備中";
 }
 function scheduleSync(ms) { clearTimeout(cloud.timer); cloud.timer = setTimeout(syncNow, ms); }
 function adoptStore(o) { store = normalize(o); persistLocal(); }
@@ -107,8 +109,8 @@ document.addEventListener("visibilitychange", function () { if (document.visibil
 window.addEventListener("online", function () { syncNow(); });
 
 /* ---------- 共通の部品 ---------- */
-var view = { name: "home", subj: lget("shk_subj") || "boki", unit: null, list: [], pos: 0, revealed: false, picked: -1, elapsed: 0, last: 0, running: false };
-if (!SUBJECTS.some(function (s) { return s.id === view.subj; })) view.subj = "boki";
+var view = { name: "home", subj: ONLY || lget("shk_subj") || "boki", unit: null, list: [], pos: 0, revealed: false, picked: -1, elapsed: 0, last: 0, running: false };
+if (!SUBJECTS.some(function (s) { return s.id === view.subj; })) view.subj = SUBJECTS[0].id;
 var app = document.getElementById("app");
 var bar = document.getElementById("bar");
 var barin = document.getElementById("barin");
@@ -213,7 +215,7 @@ function renderPlan() {
   S.units.forEach(function (u) { if (counts(u).rest > 0) need += remMins(u) * 2; });
   var avail = n * p.daily;
   var h = '<div class="topbar"><button class="btn" data-act="home">← ホーム</button></div><div><h1>学習計画</h1><p class="sub">受験日と1日の勉強時間を入れると、残りの問題を日ごとに割り振ります。予定日は、あとから1つずつ自由に変えられます。</p></div>';
-  h += subjTabs(sid, "ptab");
+  if (SUBJECTS.length > 1) h += subjTabs(sid, "ptab");
   h += '<div class="card pform"><label class="fld"><span>' + esc(S.name) + 'の受験日</span><input type="date" data-pf="exam" value="' + esc(p.exam) + '"></label>' +
     '<label class="fld"><span>1日の勉強時間</span><select data-pf="daily">';
   for (i = 30; i <= 420; i += 30) h += '<option value="' + i + '"' + (i === p.daily ? " selected" : "") + ">" + (i < 60 ? "30分" : Math.floor(i / 60) + "時間" + (i % 60 ? "30分" : "")) + "</option>";
@@ -295,12 +297,12 @@ function todayItems() {
 }
 function renderHome() {
   var sid = view.subj, S = subjById(sid), sc = subjCounts(sid), i;
-  var h = '<div class="head"><h1>資格ドリル</h1><button class="link" data-act="data" id="cstat">' + esc(stateText()) + "</button></div>";
+  var h = '<div class="head"><h1>' + esc(ONLY ? S.title : "資格ドリル") + '</h1><button class="link" data-act="data" id="cstat">' + esc(stateText()) + "</button></div>";
   if (!lget("shk_noted")) {
     h += '<div class="codebox"><b>この合言葉を、メモしてください</b><div class="code">' + esc(showCode(cloud.code)) + '</div><span class="sub">記録は、この合言葉で自動保存されます。端末が変わったり、記録が消えたりしたときは、この合言葉で戻せます。ログインは不要です。</span>' +
-      '<div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn primary" data-act="noted">メモした</button></div><span class="sub" id="cmsg"></span></div>';
+      '<div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn primary" data-act="noted">メモした</button></div><button class="link" data-act="data">すでに合言葉がある(別の端末や、ほかの科目で使っている)</button><span class="sub" id="cmsg"></span></div>';
   }
-  h += subjTabs(sid, "tab");
+  if (SUBJECTS.length > 1) h += subjTabs(sid, "tab");
   if (S.note) h += '<p class="sub">' + esc(S.note) + "</p>";
   // 今日やること
   var T = todayItems(), items = T.od.concat(T.td), label = "";
@@ -351,6 +353,11 @@ function renderHome() {
   }
   h += "</section>";
   h += '<button class="btn" data-act="data">データの保存・バックアップ・合言葉</button>';
+  if (ONLY) {
+    h += '<div class="others"><span class="sub">ほかの科目</span>';
+    [["boki", "簿記2級"], ["itpass", "ITパスポート"], ["html5", "HTML5"]].forEach(function (x) { if (x[0] !== ONLY) h += '<a class="olink" href="../' + x[0] + '/">' + x[1] + "</a>"; });
+    h += "</div>";
+  }
   app.innerHTML = h; bar.hidden = true;
 }
 
@@ -549,4 +556,4 @@ document.addEventListener("keydown", function (e) {
 
 render();
 syncNow();
-if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) { navigator.serviceWorker.register("sw.js").catch(function () {}); }
+if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) { navigator.serviceWorker.register(ROOT + "sw.js").catch(function () {}); }
