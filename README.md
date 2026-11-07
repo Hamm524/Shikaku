@@ -9,7 +9,7 @@
 
 ## 構成
 - `index.html` / `app.js` / `style.css` … アプリ本体
-- `data/boki.js` `data/itpass.js` `data/html5.js` … 問題データ(科目ごと)
+- `subjects/boki/` `subjects/itpass/` `subjects/html5/` … 科目ごとのフォルダ。問題データは各フォルダの `units.js`
 - `sw.js` `manifest.webmanifest` … ホーム画面追加と、オフラインでの表示
 
 ## 公開
