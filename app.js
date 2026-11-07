@@ -178,10 +178,13 @@ function journalHTML(line) {
 }
 function curElapsed() { return view.elapsed + (view.running ? Date.now() - view.last : 0); }
 function resetTimer() { view.elapsed = 0; view.last = Date.now(); view.running = true; }
+// 単元の練習は、「スタート」を押すまで問題を隠し、時間も止めておく(模擬試験は今までどおり)
+function gateOn(u) { return !u.mock && lget("shk_gate") !== "0"; }
+function startQuestion() { view.waiting = false; view.last = Date.now(); view.running = true; render(); }
 function go(name, extra) {
   for (var k in extra) view[k] = extra[k];
   view.name = name;
-  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; resetTimer(); }
+  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
   render(); window.scrollTo(0, 0);
 }
 function render() {
@@ -396,6 +399,7 @@ function renderHome() {
     S.units.forEach(function (u) { h += unitBtn(u); });
   }
   h += "</section>";
+  h += '<button class="btn" data-act="gate">単元の練習: スタートボタン ' + (lget("shk_gate") === "0" ? "なし(開くとすぐ開始)→ありにする" : "あり(押すまで問題を隠す)→なしにする") + "</button>";
   h += '<button class="btn" data-act="data">データの保存・バックアップ・合言葉</button>';
   if (ONLY) {
     h += '<div class="others"><span class="sub">ほかの科目</span>';
@@ -434,6 +438,12 @@ function renderQuiz() {
     h += '<button class="dot ' + (n === view.pos ? "cur " : "") + (r === 1 ? "ok" : r === 0 ? "ng" : "") + '" data-act="jump" data-n="' + n + '" aria-label="問' + (j + 1) + '">' + (j + 1) + "</button>";
   });
   h += "</div></div>";
+  if (view.waiting && !view.revealed) {
+    h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + " " + esc(p.t) + '</span><p class="qtext">準備ができたら「スタート」を押してください。問題が表示されて、時間が動き出します。</p><button class="btn primary" data-act="start">スタート</button></article>';
+    app.innerHTML = h;
+    barin.innerHTML = '<button class="btn nav" data-act="prev" aria-label="前の問題"' + (view.pos === 0 ? " disabled" : "") + '>‹</button><button class="btn primary" data-act="start">スタート</button><button class="btn nav" data-act="next" aria-label="次の問題">›</button>';
+    bar.hidden = false; return;
+  }
   var target = mins(u, p), took = store.time[k];
   var timer = view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
@@ -571,6 +581,8 @@ function handle(e) {
   if (act === "open") startUnit(unitById(t.getAttribute("data-id")), false);
   else if (act === "due") startUnit(unitById(t.getAttribute("data-id")), "due");
   else if (act === "score") doScore();
+  else if (act === "start") startQuestion();
+  else if (act === "gate") { lset("shk_gate", lget("shk_gate") === "0" ? "1" : "0"); render(); }
   else if (act === "home") go("home", {});
   else if (act === "data") go("data", {});
   else if (act === "plan") go("plan", {});
@@ -615,6 +627,8 @@ document.addEventListener("keydown", function (e) {
   var p = view.unit.ps[view.list[view.pos]];
   if (typing) { if (e.key === "Enter" && e.target.id === "ptin") { e.preventDefault(); doScore(); return; } if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !view.revealed && !p.c) { e.preventDefault(); doReveal(); } return; }
   if (e.ctrlKey) return;
+  if (view.waiting && !view.revealed && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); startQuestion(); return; }
+  if (view.waiting && !view.revealed && e.key !== "Escape" && e.key.indexOf("Arrow") !== 0) return;
   if (e.key === "Escape") go("home", {});
   else if (e.key === "ArrowLeft") move(-1);
   else if (e.key === "ArrowRight") move(1);
