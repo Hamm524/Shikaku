@@ -29,7 +29,7 @@ var STEPS = [
 var KEY = "shikaku-v1";
 function normalize(o) {
   o = o || {};
-  var s = { res: o.res || {}, memo: o.memo || {}, time: o.time || {}, plans: o.plans || {}, ts: o.ts || 0 };
+  var s = { res: o.res || {}, memo: o.memo || {}, time: o.time || {}, plans: o.plans || {}, pts: o.pts || {}, rev: o.rev || {}, ts: o.ts || 0 };
   if (o.plan && !s.plans.boki) s.plans.boki = o.plan;
   return s;
 }
@@ -44,6 +44,31 @@ function save() {
   cloud.dirty = true;
   scheduleSync(1500);
 }
+
+/* ---------- 間隔をあけた復習 ---------- */
+var INTERVALS = [1, 3, 7, 14];
+function addDays(n) { var d = today0(); d.setDate(d.getDate() + n); return fd(d); }
+function recordResult(key, good) {
+  store.res[key] = good ? 1 : 0;
+  var r = store.rev[key];
+  if (!good) store.rev[key] = { s: 0, d: addDays(INTERVALS[0]) };
+  else if (r) { var n = r.s + 1; if (n >= INTERVALS.length) delete store.rev[key]; else store.rev[key] = { s: n, d: addDays(INTERVALS[n]) }; }
+}
+function dueIndices(u) {
+  var t = fd(today0()), out = [];
+  u.ps.forEach(function (p, i) { var r = store.rev[rkey(u, i)]; if (r && r.d <= t) out.push(i); });
+  return out;
+}
+function dueSummary(sid) {
+  var list = [], total = 0;
+  subjById(sid).units.forEach(function (u) { var n = dueIndices(u).length; if (n) { list.push({ u: u, n: n }); total += n; } });
+  return { list: list, total: total };
+}
+(function migrateRev() {
+  var changed = false, t = fd(today0());
+  for (var k in store.res) { if (store.res[k] === 0 && !store.rev[k]) { store.rev[k] = { s: 0, d: t }; changed = true; } }
+  if (changed) persistLocal();
+})();
 
 /* ---------- 保存(合言葉・Firebase) ---------- */
 var FS = { projectId: "keisan-suzu", apiKey: "AIzaSyCv0vvfBwyjInAZV9cBRfVaRAn5zTEtCrg" };
@@ -78,7 +103,7 @@ function stateText() {
 function scheduleSync(ms) { clearTimeout(cloud.timer); cloud.timer = setTimeout(syncNow, ms); }
 function adoptStore(o) { store = normalize(o); persistLocal(); }
 function mergeIn(rem) {
-  ["res", "memo", "time"].forEach(function (k) { var m = {}, kk; for (kk in rem[k]) m[kk] = rem[k][kk]; for (kk in store[k]) m[kk] = store[k][kk]; store[k] = m; });
+  ["res", "memo", "time", "pts", "rev"].forEach(function (k) { var m = {}, kk; for (kk in rem[k]) m[kk] = rem[k][kk]; for (kk in store[k]) m[kk] = store[k][kk]; store[k] = m; });
   for (var s in rem.plans) if (!store.plans[s]) store.plans[s] = rem.plans[s];
 }
 function syncNow() {
@@ -322,6 +347,12 @@ function renderHome() {
   }
   if (sc.ng) h += '<button class="hlink" data-act="review-all">× の問題だけ解き直す(' + esc(S.short) + " " + sc.ng + "問)</button>";
   h += "</section>";
+  var dsum = dueSummary(sid);
+  if (dsum.total) {
+    h += '<section class="card"><b>今日の復習 ' + dsum.total + '問</b><span class="sub">間違えた問題を、間をあけて解き直すと忘れにくくなります。</span>';
+    dsum.list.forEach(function (x) { h += '<button class="hl" data-act="due" data-id="' + x.u.id + '">' + esc(x.u.name) + "(" + x.n + "問)</button>"; });
+    h += "</section>";
+  }
   // 計画
   var p = store.plans[sid], has = p && planEntries(sid).length > 0;
   h += '<button class="plancta" data-act="plan"><span><b>' + esc(S.short) + "の学習計画を" + (has ? "見る・変える" : "立てる") + "</b><small>" + (p && p.exam ? "受験日 " + jd(p.exam) + "・あと" + daysLeft(p) + "日" : "受験日と勉強時間を入れると、日ごとの予定を作ります") + "</small></span><i>›</i></button>";
@@ -331,7 +362,7 @@ function renderHome() {
     h += '<section class="mockbox"><div class="mhead"><h2>模擬試験</h2><span class="mtag">本番と同じ90分・5大問</span></div><p class="sub">仕上げに使います。通しで解いて、間違いを見直してください。</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
-      h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">90分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? "○ " + c.ok + " / " + c.n : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
+      h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">90分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
     });
     h += "</div></section>";
   }
@@ -363,12 +394,15 @@ function renderHome() {
 
 /* ---------- 問題を解く ---------- */
 function startUnit(u, onlyNg) {
+  var due = onlyNg === "due";
   view.subj = u.subj; lset("shk_subj", u.subj);
   var list = [];
-  u.ps.forEach(function (p, i) { if (!onlyNg || store.res[rkey(u, i)] === 0) list.push(i); });
+  var dueSet = due ? dueIndices(u) : [];
+  u.ps.forEach(function (p, i) { if (due ? dueSet.indexOf(i) >= 0 : (!onlyNg || store.res[rkey(u, i)] === 0)) list.push(i); });
   if (!list.length) list = u.ps.map(function (p, i) { return i; });
+  view.mode = due ? "due" : "";
   var first = 0;
-  if (!onlyNg) { for (var n = 0; n < list.length; n++) { if (store.res[rkey(u, list[n])] === undefined) { first = n; break; } } }
+  if (!onlyNg && !due) { for (var n = 0; n < list.length; n++) { if (store.res[rkey(u, list[n])] === undefined) { first = n; break; } } }
   go("quiz", { unit: u, list: list, pos: first, revealed: false });
 }
 function move(d) {
@@ -417,6 +451,7 @@ function renderQuiz() {
   var b = '<button class="btn nav" data-act="prev" aria-label="前の問題"' + (view.pos === 0 ? " disabled" : "") + ">‹</button>";
   if (isChoice) b += view.revealed ? '<button class="btn primary" data-act="next">次の問題へ ›</button>' : '<span class="hintbar">選択肢を選んでください</span>';
   else if (!view.revealed) b += '<button class="btn primary" data-act="reveal">答えを見る</button>';
+  else if (p.pt) { var pv = store.pts[k]; b += '<label class="ptlab">得点<input id="ptin" class="ptin" type="number" inputmode="numeric" min="0" max="' + p.pt + '" value="' + (pv === undefined ? "" : pv) + '" placeholder="0">/ ' + p.pt + '点</label><button class="btn primary" data-act="score">次へ ›</button>'; }
   else b += '<button class="btn ng" data-act="grade" data-v="0">× 違った</button><button class="btn ok" data-act="grade" data-v="1">○ できた</button>';
   if (!(isChoice && view.revealed)) b += '<button class="btn nav" data-act="next" aria-label="次の問題">›</button>';
   barin.innerHTML = b; bar.hidden = false;
@@ -427,6 +462,14 @@ function renderDone() {
   var u = view.unit, ok = 0, ng = 0;
   view.list.forEach(function (j) { var r = store.res[rkey(u, j)]; if (r === 1) ok++; else if (r === 0) ng++; });
   var h = '<div class="topbar"><button class="link" data-act="home">← 単元一覧</button></div>';
+  if (u.mock && u.ps[0].pt) {
+    var ms = mockScore(u), pass = Math.round(ms.max * 0.7), need = Math.max(0, pass - ms.got);
+    h += '<div class="card result"><span class="tag">' + esc(u.name) + '</span><div class="big">' + ms.got + " / " + ms.max + '点</div><p class="sub">' +
+      (ms.done < ms.n ? "採点していない問題が" + (ms.n - ms.done) + "つあります。" : ms.got >= pass ? "合格ライン(" + pass + "点)を超えました。" : "合格ラインの" + pass + "点まで、あと" + need + "点です。") + '</p><div class="steps">';
+    u.ps.forEach(function (p, i) { var v = store.pts[rkey(u, i)]; h += '<div class="sub">第' + (i + 1) + "問 " + (v === undefined ? "未採点" : v + " / " + p.pt + "点") + "</div>"; });
+    h += '</div><p class="sub">点が低かった大問から、解説を読み直しましょう。</p><div class="row"><button class="btn primary" data-act="retry">点が足りない問題だけ解き直す</button><button class="btn" data-act="home">一覧へ</button></div></div>';
+    app.innerHTML = h; bar.hidden = true; return;
+  }
   h += '<div class="card result"><span class="tag">' + esc(u.name) + '</span><div class="big">' + ok + " / " + view.list.length + '問 できた</div>' +
     '<p class="sub">' + (ng ? "× の問題が" + ng + "問あります。解説を読んでから、もう一度解いてみましょう。" : "すべて○です。次の単元に進みましょう。") + "</p>" +
     '<div class="row">' + (ng ? '<button class="btn primary" data-act="retry">× だけ解き直す</button>' : "") + '<button class="btn" data-act="restart">最初から解く</button><button class="btn" data-act="home">一覧へ</button></div></div>';
@@ -436,7 +479,7 @@ function doPick(n) {
   if (view.revealed) return;
   var u = view.unit, idx = view.list[view.pos], p = u.ps[idx];
   view.elapsed = curElapsed(); view.running = false; view.revealed = true; view.picked = n;
-  store.res[rkey(u, idx)] = n === p.k ? 1 : 0; store.time[rkey(u, idx)] = Math.round(view.elapsed / 1000); save();
+  recordResult(rkey(u, idx), n === p.k); store.time[rkey(u, idx)] = Math.round(view.elapsed / 1000); save();
   render();
 }
 function doReveal() {
@@ -444,7 +487,18 @@ function doReveal() {
   store.time[rkey(view.unit, view.list[view.pos])] = Math.round(view.elapsed / 1000); save();
   render(); var a = document.querySelector(".answer"); if (a) a.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-function doGrade(v) { store.res[rkey(view.unit, view.list[view.pos])] = v; save(); move(1); }
+function doGrade(v) { recordResult(rkey(view.unit, view.list[view.pos]), v === 1); save(); move(1); }
+function doScore() {
+  var u = view.unit, idx = view.list[view.pos], p = u.ps[idx], el = document.getElementById("ptin"), v = Math.round(+(el && el.value));
+  if (isNaN(v)) v = 0;
+  v = Math.max(0, Math.min(p.pt, v));
+  store.pts[rkey(u, idx)] = v; recordResult(rkey(u, idx), v >= p.pt * 0.7); save(); move(1);
+}
+function mockScore(u) {
+  var got = 0, max = 0, done = 0;
+  u.ps.forEach(function (p, i) { max += p.pt || 0; var v = store.pts[rkey(u, i)]; if (v !== undefined) { got += v; done++; } });
+  return { got: got, max: max, done: done, n: u.ps.length };
+}
 
 /* ---------- データの保存・バックアップ ---------- */
 function backupSummary(o) {
@@ -500,6 +554,8 @@ function handle(e) {
   if (!t) return;
   var act = t.getAttribute("data-act");
   if (act === "open") startUnit(unitById(t.getAttribute("data-id")), false);
+  else if (act === "due") startUnit(unitById(t.getAttribute("data-id")), "due");
+  else if (act === "score") doScore();
   else if (act === "home") go("home", {});
   else if (act === "data") go("data", {});
   else if (act === "plan") go("plan", {});
@@ -542,7 +598,7 @@ document.addEventListener("keydown", function (e) {
   var typing = tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
   if (view.name !== "quiz") return;
   var p = view.unit.ps[view.list[view.pos]];
-  if (typing) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !view.revealed && !p.c) { e.preventDefault(); doReveal(); } return; }
+  if (typing) { if (e.key === "Enter" && e.target.id === "ptin") { e.preventDefault(); doScore(); return; } if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !view.revealed && !p.c) { e.preventDefault(); doReveal(); } return; }
   if (e.ctrlKey) return;
   if (e.key === "Escape") go("home", {});
   else if (e.key === "ArrowLeft") move(-1);

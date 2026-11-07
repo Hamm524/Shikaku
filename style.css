@@ -181,3 +181,5 @@ textarea.mono, .codeans { font-family: ui-monospace, "SF Mono", Menlo, Consolas,
 }
 .others { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .olink { color: var(--accent); font-weight: 700; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); text-decoration: none; min-height: 40px; display: inline-flex; align-items: center; }
+
+.ptlab{display:flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}.ptin{width:64px;font:inherit;padding:8px;border:1px solid var(--line,#ccc);border-radius:8px;background:transparent;color:inherit;text-align:right}
