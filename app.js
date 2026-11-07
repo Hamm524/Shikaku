@@ -4,7 +4,7 @@
 /* ---------- 科目とデータ ---------- */
 var ONLY = window.ONLY || "";
 var SUBJECTS = [
-  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18" },
+  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "いまの問題はサンプルです。順に増やします。" },
   { id: "html5", name: "HTML5プロフェッショナル レベル2", short: "HTML5", title: "HTML5ドリル", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
@@ -14,15 +14,20 @@ SUBJECTS.forEach(function (s) { s.units.forEach(function (u) { u.subj = s.id; u.
 function subjById(id) { return SUBJECTS.filter(function (s) { return s.id === id; })[0] || SUBJECTS[0]; }
 function unitById(id) { return UNITS.filter(function (u) { return u.id === id; })[0]; }
 function orderOf(sid) {
-  var us = subjById(sid).units;
+  var S = subjById(sid), us = S.units;
+  if (S.order) {
+    var ids = S.order.filter(function (id) { return unitById(id); });
+    us.forEach(function (u) { if (!u.mock && ids.indexOf(u.id) < 0) ids.push(u.id); });
+    return ids.concat(us.filter(function (u) { return u.mock && ids.indexOf(u.id) < 0; }).map(function (u) { return u.id; }));
+  }
   return us.filter(function (u) { return !u.mock; }).concat(us.filter(function (u) { return u.mock; })).map(function (u) { return u.id; });
 }
 var STEPS = [
   { s: [11, 6], e: [11, 12], name: "3級範囲と仕訳", ids: ["t1", "t2", "t3"] },
   { s: [11, 13], e: [11, 19], name: "工業簿記(前半)", ids: ["k1", "k2"] },
-  { s: [11, 20], e: [11, 26], name: "工業簿記(後半)と商業の基礎", ids: ["k3", "s1"] },
-  { s: [11, 27], e: [12, 3], name: "商業の2級論点", ids: ["s2", "s3", "s4"] },
-  { s: [12, 4], e: [12, 10], name: "本試験形式の大問演習", ids: ["d1", "d2", "d3", "d4", "d5", "g"] }
+  { s: [11, 20], e: [11, 26], name: "商業の基礎と連結会計の入口、工業簿記(後半)", ids: ["s1", "s4", "k3"] },
+  { s: [11, 27], e: [12, 3], name: "商業の2級論点と、連結・工業の大問", ids: ["s2", "d5", "d2", "d3"] },
+  { s: [12, 4], e: [12, 10], name: "財務諸表と本試験形式の大問", ids: ["s3", "d1", "d4", "g"] }
 ];
 
 /* ---------- 保存(端末) ---------- */
@@ -223,7 +228,7 @@ function autoPlan(sid, p) {
   var us = subjById(sid).units, mocks = us.filter(function (u) { return u.mock; }), mi = {}, back = [n - 1, n - 4, n - 9];
   mocks.forEach(function (u, i) { var j = mocks.length - 1 - i; mi[u.id] = Math.max(0, back[Math.min(j, 2)]); if (counts(u).rest > 0) dates[u.id] = days[mi[u.id]]; });
   var firstMock = mocks.length ? Math.max(1, Math.min.apply(null, mocks.map(function (u) { return mi[u.id]; }))) : n;
-  var nm = us.filter(function (u) { return !u.mock && counts(u).rest > 0; }), T = 0, c = 0;
+  var nm = orderOf(sid).map(unitById).filter(function (u) { return !u.mock && counts(u).rest > 0; }), T = 0, c = 0;
   nm.forEach(function (u) { T += remMins(u); });
   nm.forEach(function (u) { dates[u.id] = days[Math.min(firstMock - 1, Math.floor(c / T * firstMock))]; c += remMins(u); });
   return dates;
@@ -241,7 +246,14 @@ function renderPlan() {
   var avail = n * p.daily;
   var h = '<div class="topbar"><button class="btn" data-act="home">← ホーム</button></div><div><h1>学習計画</h1><p class="sub">受験日と1日の勉強時間を入れると、残りの問題を日ごとに割り振ります。予定日は、あとから1つずつ自由に変えられます。</p></div>';
   if (SUBJECTS.length > 1) h += subjTabs(sid, "ptab");
-  h += '<div class="card pform"><label class="fld"><span>' + esc(S.name) + 'の受験日</span><input type="date" data-pf="exam" value="' + esc(p.exam) + '"></label>' +
+  h += '<div class="card pform">';
+  if (S.kinds) {
+    h += '<div class="fld"><span>試験の種類</span><div class="offs">';
+    S.kinds.forEach(function (k) { h += '<label class="chk"><input type="radio" name="kind" data-pf="kind" value="' + k[0] + '"' + ((p.kind || S.kinds[0][0]) === k[0] ? " checked" : "") + ">" + esc(k[1]) + "</label>"; });
+    h += "</div></div>";
+    h += '<p class="sub">' + ((p.kind || S.kinds[0][0]) === "net" ? "ネット試験は、テストセンターで日時を自分で選べます。予約した日(まだなら受けたい日)を入れてください。" : "統一試験は、決まった日に全国一斉に行われます。日本商工会議所の試験日を入れてください。") + "</p>";
+  }
+  h += '<label class="fld"><span>' + esc(S.name) + 'の受験日</span><input type="date" data-pf="exam" value="' + esc(p.exam) + '"></label>' +
     '<label class="fld"><span>1日の勉強時間</span><select data-pf="daily">';
   for (i = 30; i <= 420; i += 30) h += '<option value="' + i + '"' + (i === p.daily ? " selected" : "") + ">" + (i < 60 ? "30分" : Math.floor(i / 60) + "時間" + (i % 60 ? "30分" : "")) + "</option>";
   h += '</select></label><div class="fld"><span>休む曜日</span><div class="offs">';
@@ -275,6 +287,7 @@ function onChange(e) {
   if (!f) return;
   var sid = view.subj, p = getPlan(sid); store.plans[sid] = p;
   if (f === "exam") p.exam = t.value || "";
+  else if (f === "kind") p.kind = t.value;
   else if (f === "daily") p.daily = +t.value;
   else if (f === "off") { var d = +t.getAttribute("data-d"), k = p.off.indexOf(d); if (t.checked && k < 0) p.off.push(d); if (!t.checked && k >= 0) p.off.splice(k, 1); }
   else if (f === "date") { var id = t.getAttribute("data-id"); if (t.value) p.dates[id] = t.value; else delete p.dates[id]; }
@@ -355,7 +368,7 @@ function renderHome() {
   }
   // 計画
   var p = store.plans[sid], has = p && planEntries(sid).length > 0;
-  h += '<button class="plancta" data-act="plan"><span><b>' + esc(S.short) + "の学習計画を" + (has ? "見る・変える" : "立てる") + "</b><small>" + (p && p.exam ? "受験日 " + jd(p.exam) + "・あと" + daysLeft(p) + "日" : "受験日と勉強時間を入れると、日ごとの予定を作ります") + "</small></span><i>›</i></button>";
+  h += '<button class="plancta" data-act="plan"><span><b>' + esc(S.short) + "の学習計画を" + (has ? "見る・変える" : "立てる") + "</b><small>" + (p && p.exam ? "受験日 " + jd(p.exam) + (S.kinds ? "(" + (S.kinds.filter(function (k) { return k[0] === (p.kind || S.kinds[0][0]); })[0] || S.kinds[0])[1] + ")" : "") + "・あと" + daysLeft(p) + "日" : "受験日と勉強時間を入れると、日ごとの予定を作ります") + "</small></span><i>›</i></button>";
   // 模擬試験
   var mocks = S.units.filter(function (u) { return u.mock; });
   if (mocks.length) {

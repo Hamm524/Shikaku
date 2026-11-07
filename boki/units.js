@@ -155,3 +155,6 @@ BOKI.forEach(function (u) { var w = BOKI_W[u.id]; if (w) u.ps.forEach(function (
   var X = { s1: [2], s4: [0, 1] };
   Object.keys(X).forEach(function (id) { BOKI.filter(function (u) { return u.id === id; })[0].ps.forEach(function (p, i) { if (X[id].indexOf(i) >= 0) p.lvx = "この問題は、現行の2級の出題範囲外(1級相当)の可能性があります。解けなくても気にしすぎないでください。"; }); });
 })();
+
+// おすすめの順番: 3級の範囲 → 工業簿記(点が取りやすい) → 商業簿記。連結会計(s4・d5)は最後にまとめず、途中に挟んで並行して進める。
+var BOKI_ORDER = ["t1", "t2", "t3", "k1", "k2", "s1", "s4", "k3", "s2", "d5", "d2", "d3", "s3", "d1", "d4", "g"];
