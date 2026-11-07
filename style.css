@@ -192,3 +192,7 @@ textarea.mono, .codeans { font-family: ui-monospace, "SF Mono", Menlo, Consolas,
 @media (prefers-color-scheme:dark){.lv-b{color:#bbb}.lv-x{color:#e8b94a}.lv-e{color:#f08080}.lv{color:#5fd0c8}}
 
 .gist h2{margin:2px 0}.gist h3{font-size:.95em;margin:12px 0 2px}.gist ul{margin:2px 0;padding-left:1.3em;line-height:1.7}.gist li{margin:2px 0}.gist p{line-height:1.7;margin:2px 0}
+
+.fpick{display:flex;flex-direction:column;gap:6px}.fpick .chk{align-items:flex-start}
+
+.lv-vx{background:rgba(43,95,217,.14);color:#2b5fd9}
