@@ -375,7 +375,6 @@ function renderHome() {
   }
   if (sc.ng) h += '<button class="hlink" data-act="review-all">× の問題だけ解き直す(' + esc(S.short) + " " + sc.ng + "問)</button>";
   h += "</section>";
-  h += '<button class="plancta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を決めて出す。間違えた問題の復習も</small></span><i>›</i></button>';
   var dsum = dueSummary(sid);
   if (dsum.total) {
     h += '<section class="card"><b>今日の復習 ' + dsum.total + '問</b><span class="sub">間違えた問題を、間をあけて解き直すと忘れにくくなります。</span>';
@@ -385,16 +384,18 @@ function renderHome() {
   // 計画
   var p = store.plans[sid], has = p && planEntries(sid).length > 0;
   h += '<button class="plancta" data-act="plan"><span><b>' + esc(S.short) + "の学習計画を" + (has ? "見る・変える" : "立てる") + "</b><small>" + (p && p.exam ? "受験日 " + jd(p.exam) + (S.kinds ? "(" + (S.kinds.filter(function (k) { return k[0] === (p.kind || S.kinds[0][0]); })[0] || S.kinds[0])[1] + ")" : "") + "・あと" + daysLeft(p) + "日" : "受験日と勉強時間を入れると、日ごとの予定を作ります") + "</small></span><i>›</i></button>";
-  // 模擬試験
+  // 模擬試験(あとで「模擬試験」タブに入れる)
+  var hMain = h; h = "";
   var mocks = S.units.filter(function (u) { return u.mock; });
   if (mocks.length) {
-    h += '<section class="mockbox"><div class="mhead"><h2>模擬試験</h2><span class="mtag">本番と同じ90分・5大問</span></div><p class="sub">仕上げに使います。通しで解いて、間違いを見直してください。</p><div class="mgrid">';
+    h += '<section class="mockbox"><div class="mhead"><h2>模擬試験</h2><span class="mtag">90分の目安・5大問・100点</span></div><p class="sub">仕上げに使います。通しで解いて、間違いを見直してください。</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
       h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">90分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
     });
     h += "</div></section>";
   }
+  var mockHtml = h; h = "";
   h += '<div class="card" style="gap:10px"><div class="row" style="justify-content:space-between"><strong>' + esc(S.name) + " " + sc.n + '問</strong><span class="sub">○ ' + sc.ok + " / × " + sc.ng + " / 未解答 " + sc.rest + "</span></div>" +
     '<div class="bar"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div></div>';
   // 単元
@@ -412,7 +413,14 @@ function renderHome() {
     S.units.forEach(function (u) { h += unitBtn(u); });
   }
   h += "</section>";
-  h += '<button class="btn" data-act="gate">単元の練習: スタートボタン ' + (lget("shk_gate") === "0" ? "なし(開くとすぐ開始)→ありにする" : "あり(押すまで問題を隠す)→なしにする") + "</button>";
+  var unitsHtml = h; h = hMain;
+  var hasMock = mocks.length > 0, mode = hasMock && lget("shk_mode") === "mock" ? "mock" : "practice";
+  if (hasMock) {
+    h += '<div class="modetabs" role="tablist"><button class="mtab' + (mode === "practice" ? " on" : "") + '" role="tab" aria-selected="' + (mode === "practice") + '" data-act="mode" data-v="practice"><b>練習</b><small>単元ごとに学ぶ・復習</small></button>' +
+      '<button class="mtab' + (mode === "mock" ? " on" : "") + '" role="tab" aria-selected="' + (mode === "mock") + '" data-act="mode" data-v="mock"><b>模擬試験</b><small>本番と同じ形式・配点</small></button></div>';
+  }
+  if (mode === "mock") h += mockHtml;
+  else h += '<button class="plancta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を決めて出す。間違えた問題の復習も</small></span><i>›</i></button>' + unitsHtml;
   h += '<button class="btn" data-act="data">データの保存・バックアップ・合言葉</button>';
   if (ONLY) {
     h += '<div class="others"><span class="sub">ほかの科目</span>';
@@ -617,6 +625,7 @@ function renderData() {
   h += '<div class="card"><span class="sub" id="cstat">' + esc(stateText()) + '</span><b>あなたの合言葉</b><div class="code">' + esc(showCode(cloud.code)) + '</div><span class="sub">別の端末や、記録が消えたときは、この合言葉で戻せます。他の人には教えないでください。</span><div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn" data-act="sync-now">いま保存する</button></div><span class="sub" id="cmsg"></span></div>';
   h += '<div class="card"><b>合言葉で戻す</b><span class="sub">メモしておいた合言葉(10文字)を入れると、その記録に入れかえます。</span><input class="txt" id="codein" type="text" inputmode="latin" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="例: abcde-fghjk"><button class="btn primary" data-act="code-restore">この合言葉で戻す</button><span class="sub" id="rmsg"></span></div>';
   h += '<div class="card"><b>手元のバックアップ</b><span class="sub">念のため、進み具合を文字として控えておけます。</span><button class="btn" data-act="bk-copy">進み具合をコピーする</button><textarea id="bkbox" class="bkbox" placeholder="復元するときは、コピーした文字をここに貼り付けます"></textarea><button class="btn" data-act="bk-restore">貼り付けた内容から復元する</button><span class="sub" id="bkmsg"></span></div>';
+  h += '<div class="card"><b>練習の設定</b><span class="sub">単元の練習で、問題を開いたときの始め方を選べます。</span><button class="btn" data-act="gate">スタートボタン ' + (lget("shk_gate") === "0" ? "なし(開くとすぐ開始)→ありにする" : "あり(押すまで問題を隠す)→なしにする") + "</button></div>";
   h += '<div class="card"><b>新しい記録で始める</b><span class="sub">別の人が使うときなどに。今の記録は消えず、いまの合言葉で戻せます。</span><button class="btn" data-act="new-record">新しい記録で始める</button></div>';
   app.innerHTML = h; bar.hidden = true;
 }
@@ -683,6 +692,7 @@ function handle(e) {
   else if (act === "begin") go("quiz", { revealed: false });
   else if (act === "gist") go("intro", {});
   else if (act === "free") go("free", {});
+  else if (act === "mode") { lset("shk_mode", t.getAttribute("data-v")); render(); }
   else if (act === "fall") { subjById(view.subj).units.forEach(function (u) { view.free.units[u.id] = true; }); render(); }
   else if (act === "fnone") { view.free.units = {}; render(); }
   else if (act === "fstart") {

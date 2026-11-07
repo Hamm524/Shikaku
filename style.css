@@ -196,3 +196,8 @@ textarea.mono, .codeans { font-family: ui-monospace, "SF Mono", Menlo, Consolas,
 .fpick{display:flex;flex-direction:column;gap:6px}.fpick .chk{align-items:flex-start}
 
 .lv-vx{background:rgba(43,95,217,.14);color:#2b5fd9}
+
+.modetabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mtab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--line,#d5d9d8);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.mtab b{font-size:1.02em}.mtab small{font-size:.74em;opacity:.7}
+.mtab.on{border-color:var(--accent);background:var(--accent);color:#fff}.mtab.on small{opacity:.9}
