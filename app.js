@@ -441,7 +441,9 @@ function renderQuiz() {
   if (view.revealed) {
     h += '<div class="answer">';
     if (!isChoice) h += "<h3>" + (isCode ? "模範解答" : "解答") + "</h3>" + (isCode ? '<pre class="codeans">' + esc(p.code) + "</pre>" : p.a.map(journalHTML).join(""));
-    h += '<div class="expl"><b>解説</b>' + esc(p.e) + "</div></div>";
+    h += '<div class="expl"><b>解説</b>' + esc(p.e) + "</div>";
+    if (p.w) h += '<div class="trap' + (store.res[k] === 0 ? " miss" : "") + '"><b>' + (store.res[k] === 0 ? "ここで間違えやすい" : "ひっかけポイント・覚え方") + "</b>" + esc(p.w) + "</div>";
+    h += "</div>";
   }
   h += "</article>";
   if (window.matchMedia && window.matchMedia("(hover:hover) and (pointer:fine)").matches) {
