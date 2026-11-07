@@ -144,14 +144,8 @@ var BOKI_W = {"t1": ["元入れの貸方を売上などの収益にしがち。�
 BOKI.forEach(function (u) { var w = BOKI_W[u.id]; if (w) u.ps.forEach(function (p, i) { if (w[i]) p.w = w[i]; }); });
 
 (function () {
-  var N = {
-    b: ["3級の範囲", "3級で習う内容です。2級は3級の内容が前提なので、2級の試験でも出ます。3級が不安なときの土台づくりに使ってください。"],
-    a: ["2級 商業簿記", "2級の商業簿記の問題です。"],
-    x: ["2級 工業簿記", "2級の工業簿記の問題です。"],
-    m: ["本試験形式", "本番と同じ形式・配点の問題です。"]
-  };
-  var MAP = { t1: "b", t2: "b", t3: "b", k1: "x", k2: "x", k3: "x", s1: "a", s2: "a", s3: "a", s4: "a", d1: "m", d2: "m", d3: "m", d4: "m", d5: "m", m1: "m", m2: "m", m3: "m", g: "m" };
-  BOKI.forEach(function (u) { var k = MAP[u.id]; if (k) { u.lv = N[k][0]; u.lvn = N[k][1]; u.lvc = k; } });
+  // 3級の範囲の単元にだけバッジを付ける(2級が基本なので、2級にはバッジを付けない)
+  ["t1", "t2", "t3"].forEach(function (id) { BOKI.filter(function (u) { return u.id === id; })[0].lv = "3級"; });
   var X = { s1: [2], s4: [0, 1] };
   Object.keys(X).forEach(function (id) { BOKI.filter(function (u) { return u.id === id; })[0].ps.forEach(function (p, i) { if (X[id].indexOf(i) >= 0) p.lvx = "この問題は、現行の2級の出題範囲外(1級相当)の可能性があります。解けなくても気にしすぎないでください。"; }); });
 })();

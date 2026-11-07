@@ -292,7 +292,7 @@ function subjTabs(cur, cls) {
 }
 function unitBtn(u) {
   var c = counts(u);
-  return '<button class="unit" data-act="open" data-id="' + u.id + '"><div class="top"><span class="name">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + '</span><span class="weeks">' + (c.rest === 0 ? "完了" : "") + "</span></div>" +
+  return '<button class="unit" data-act="open" data-id="' + u.id + '"><div class="top"><span class="name">' + (u.lv ? '<em class="lv lv-b">' + esc(u.lv) + "</em>" : "") + esc(u.name) + '</span><span class="weeks">' + (c.rest === 0 ? "完了" : "") + "</span></div>" +
     '<div class="bar"><i class="ok" style="width:' + (c.ok / c.n * 100) + '%"></i><i class="ng" style="width:' + (c.ng / c.n * 100) + '%"></i></div>' +
     '<div class="stat"><span>' + c.n + "問・目安 " + fmtMin(unitMins(u)) + "</span><span>○ " + c.ok + "</span><span>× " + c.ng + "</span><span>未解答 " + c.rest + "</span></div></button>";
 }
@@ -415,7 +415,7 @@ function renderQuiz() {
   var u = view.unit, idx = view.list[view.pos], p = u.ps[idx], k = rkey(u, idx), isChoice = !!p.c, isCode = !!p.code;
   var h = '<div class="topbar"><button class="link" data-act="home">← 単元一覧</button><span class="sub">' + (view.pos + 1) + " / " + view.list.length + "</span></div>";
   h += '<div class="progress"><i style="width:' + ((view.pos + (view.revealed ? 1 : 0)) / view.list.length * 100) + '%"></i></div>';
-  h += '<div><div class="sub">' + esc(u.name) + "</div>" + (u.lv ? '<div class="lvnote lv-' + u.lvc + '"><b>' + esc(u.lv) + "</b> " + esc(u.lvn) + "</div>" : "") + '<div class="dots">';
+  h += '<div><div class="sub">' + esc(u.name) + "</div>" + '<div class="dots">';
   view.list.forEach(function (j, n) {
     var r = store.res[rkey(u, j)];
     h += '<button class="dot ' + (n === view.pos ? "cur " : "") + (r === 1 ? "ok" : r === 0 ? "ng" : "") + '" data-act="jump" data-n="' + n + '" aria-label="問' + (j + 1) + '">' + (j + 1) + "</button>";
@@ -425,7 +425,7 @@ function renderQuiz() {
   var timer = view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
-  h += '<article class="card"><span class="tag">問' + (idx + 1) + " " + esc(p.t) + "</span>" + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
+  h += '<article class="card">' + (u.lv ? '<em class="lv lv-b">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + " " + esc(p.t) + "</span>" + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
   if (isChoice) {
     h += '<div class="choices" role="group" aria-label="選択肢">';
     p.c.forEach(function (c, n) {
