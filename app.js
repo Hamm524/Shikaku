@@ -192,6 +192,7 @@ function render() {
   else if (view.name === "quiz") renderQuiz();
   else if (view.name === "plan") renderPlan();
   else if (view.name === "data") renderData();
+  else if (view.name === "intro") renderIntro();
   else renderDone();
 }
 setInterval(function () {
@@ -420,7 +421,18 @@ function startUnit(u, onlyNg) {
   view.mode = due ? "due" : "";
   var first = 0;
   if (!onlyNg && !due) { for (var n = 0; n < list.length; n++) { if (store.res[rkey(u, list[n])] === undefined) { first = n; break; } } }
-  go("quiz", { unit: u, list: list, pos: first, revealed: false });
+  if (u.gist && !onlyNg && !due) go("intro", { unit: u, list: list, pos: first, revealed: false });
+  else go("quiz", { unit: u, list: list, pos: first, revealed: false });
+}
+function renderIntro() {
+  var u = view.unit, g = u.gist, h = '<div class="topbar"><button class="link" data-act="home">← 単元一覧</button></div>';
+  h += '<div class="card gist"><span class="tag">' + (u.lv ? esc(u.lv) + " ・ " : "") + esc(u.name) + '</span><h2>この単元の要点</h2><p class="sub">問題の前に、さっと読んでください。分からなくても大丈夫です。問題を解いたあとに戻ってきても読めます。</p>';
+  h += "<h3>できるようになること</h3><p>" + esc(g.goal) + "</p>";
+  h += "<h3>覚えるルールと式</h3><ul>" + g.rules.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+  h += "<h3>迷いやすい点・試験での出方</h3><ul>" + g.traps.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+  if (g.link) h += '<p class="sub">詳しく読みたいとき: <a href="' + esc(g.link) + '" target="_blank" rel="noopener">いぬぼき(無料講座・外部サイト)</a></p>';
+  h += '</div><button class="btn primary" data-act="begin">問題を始める</button>';
+  app.innerHTML = h; bar.hidden = true;
 }
 function move(d) {
   var np = view.pos + d;
@@ -430,7 +442,7 @@ function move(d) {
 }
 function renderQuiz() {
   var u = view.unit, idx = view.list[view.pos], p = u.ps[idx], k = rkey(u, idx), isChoice = !!p.c, isCode = !!p.code;
-  var h = '<div class="topbar"><button class="link" data-act="home">← 単元一覧</button><span class="sub">' + (view.pos + 1) + " / " + view.list.length + "</span></div>";
+  var h = '<div class="topbar"><button class="link" data-act="home">← 単元一覧</button>' + (u.gist ? '<button class="link" data-act="gist">この単元の要点</button>' : "") + '<span class="sub">' + (view.pos + 1) + " / " + view.list.length + "</span></div>";
   h += '<div class="progress"><i style="width:' + ((view.pos + (view.revealed ? 1 : 0)) / view.list.length * 100) + '%"></i></div>';
   h += '<div><div class="sub">' + esc(u.name) + "</div>" + (u.lv ? '<div class="lvnote lv-' + u.lvc + '"><b>' + esc(u.lv) + "</b> " + esc(u.lvn) + "</div>" : "") + '<div class="dots">';
   view.list.forEach(function (j, n) {
@@ -599,6 +611,8 @@ function handle(e) {
   else if (act === "grade") doGrade(+t.getAttribute("data-v"));
   else if (act === "prev") move(-1);
   else if (act === "next") move(1);
+  else if (act === "begin") go("quiz", { revealed: false });
+  else if (act === "gist") go("intro", {});
   else if (act === "retry") startUnit(view.unit, true);
   else if (act === "restart") go("quiz", { pos: 0, revealed: false });
   else if (act === "review-all") {
