@@ -139,13 +139,13 @@ document.addEventListener("visibilitychange", function () { if (document.visibil
 window.addEventListener("online", function () { syncNow(); });
 
 /* ---------- 共通の部品 ---------- */
-var view = { name: "home", subj: ONLY || lget("shk_subj") || "boki", unit: null, list: [], pos: 0, revealed: false, picked: -1, elapsed: 0, last: 0, running: false };
+var view = { free: { units: {}, pick: "all", n: 10, shuffle: true, vary: true }, name: "home", subj: ONLY || lget("shk_subj") || "boki", unit: null, list: [], pos: 0, revealed: false, picked: -1, elapsed: 0, last: 0, running: false };
 if (!SUBJECTS.some(function (s) { return s.id === view.subj; })) view.subj = SUBJECTS[0].id;
 var app = document.getElementById("app");
 var bar = document.getElementById("bar");
 var barin = document.getElementById("barin");
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-function rkey(u, i) { return u.id + "-" + i; }
+function rkey(u, i) { return u.src ? rkey(u.src[i].u, u.src[i].i) : u.id + "-" + i; }
 function mins(u, p) { return p.m || u.dm; }
 function unitMins(u) { var s = 0; u.ps.forEach(function (p) { s += mins(u, p); }); return s; }
 function fmtMin(n) { return (Math.round(n * 10) / 10) + "分"; }
@@ -193,6 +193,7 @@ function render() {
   else if (view.name === "plan") renderPlan();
   else if (view.name === "data") renderData();
   else if (view.name === "intro") renderIntro();
+  else if (view.name === "free") renderFree();
   else renderDone();
 }
 setInterval(function () {
@@ -287,7 +288,17 @@ function planRow(u, date, m) {
     '<input type="date" data-pf="date" data-id="' + u.id + '" value="' + esc(date) + '"></div>';
 }
 function onChange(e) {
-  var t = e.target, f = t.getAttribute && t.getAttribute("data-pf");
+  var t = e.target, fp = t.getAttribute && t.getAttribute("data-fp");
+  if (fp) {
+    var F = view.free;
+    if (fp === "unit") { if (t.checked) F.units[t.getAttribute("data-id")] = true; else delete F.units[t.getAttribute("data-id")]; }
+    else if (fp === "pick") F.pick = t.value;
+    else if (fp === "n") F.n = +t.value;
+    else if (fp === "shuffle") F.shuffle = t.checked;
+    else if (fp === "vary") F.vary = t.checked;
+    render(); return;
+  }
+  var f = t.getAttribute && t.getAttribute("data-pf");
   if (!f) return;
   var sid = view.subj, p = getPlan(sid); store.plans[sid] = p;
   if (f === "exam") p.exam = t.value || "";
@@ -364,6 +375,7 @@ function renderHome() {
   }
   if (sc.ng) h += '<button class="hlink" data-act="review-all">× の問題だけ解き直す(' + esc(S.short) + " " + sc.ng + "問)</button>";
   h += "</section>";
+  h += '<button class="plancta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を決めて出す。間違えた問題の復習も</small></span><i>›</i></button>';
   var dsum = dueSummary(sid);
   if (dsum.total) {
     h += '<section class="card"><b>今日の復習 ' + dsum.total + '問</b><span class="sub">間違えた問題を、間をあけて解き直すと忘れにくくなります。</span>';
@@ -413,6 +425,11 @@ function renderHome() {
 /* ---------- 問題を解く ---------- */
 function startUnit(u, onlyNg) {
   var due = onlyNg === "due";
+  if (due || onlyNg) {
+    var dset = due ? dueIndices(u) : [], items = [];
+    u.ps.forEach(function (p, i) { if (due ? dset.indexOf(i) >= 0 : store.res[rkey(u, i)] === 0) items.push({ u: u, i: i }); });
+    if (items.length) { startMix(items, u.name + (due ? "の復習" : "の解き直し"), true, u.subj); return; }
+  }
   view.subj = u.subj; lset("shk_subj", u.subj);
   var list = [];
   var dueSet = due ? dueIndices(u) : [];
@@ -432,6 +449,58 @@ function renderIntro() {
   h += "<h3>迷いやすい点・試験での出方</h3><ul>" + g.traps.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
   if (g.link) h += '<p class="sub">詳しく読みたいとき: <a href="' + esc(g.link) + '" target="_blank" rel="noopener">いぬぼき(無料講座・外部サイト)</a></p>';
   h += '</div><button class="btn primary" data-act="begin">問題を始める</button>';
+  app.innerHTML = h; bar.hidden = true;
+}
+/* ---------- 自由練習・復習(複数の単元を混ぜて出す) ---------- */
+function pickVariant(p) {
+  if (!p.v || !p.v.length) return p;
+  var v = p.v[Math.floor(Math.random() * p.v.length)], o = {};
+  for (var k in p) o[k] = p[k];
+  o.q = v.q; o.a = v.a; o.e = v.e; o.vx = true;
+  return o;
+}
+function shuffled(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+// items: [{u, i}] を、1つの練習として始める。vary=trueなら、解いたことのある問題は数字違いで出す
+function startMix(items, label, vary, subj) {
+  var ps = items.map(function (x) {
+    var p = x.u.ps[x.i];
+    return vary && store.res[rkey(x.u, x.i)] !== undefined ? pickVariant(p) : p;
+  });
+  var mu = { id: "free", name: label, subj: subj, ps: ps, src: items, dm: 5, mix: true };
+  view.subj = subj; lset("shk_subj", subj);
+  view.mode = "mix";
+  go("quiz", { unit: mu, list: ps.map(function (p, n) { return n; }), pos: 0, revealed: false });
+}
+function itemsFor(f) {
+  var out = [], t = fd(today0());
+  subjById(view.subj).units.forEach(function (u) {
+    if (!f.units[u.id]) return;
+    u.ps.forEach(function (p, i) {
+      var r = store.res[rkey(u, i)], rv = store.rev[rkey(u, i)];
+      if (f.pick === "new" && r !== undefined) return;
+      if (f.pick === "ng" && r !== 0) return;
+      if (f.pick === "due" && !(rv && rv.d <= t)) return;
+      out.push({ u: u, i: i });
+    });
+  });
+  if (f.shuffle) out = shuffled(out);
+  if (f.n > 0) out = out.slice(0, f.n);
+  return out;
+}
+function renderFree() {
+  var f = view.free, S = subjById(view.subj), h = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自由に練習する</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>';
+  h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
+  S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・×" + c.ng + ")</label>"; });
+  h += '</div><div class="row"><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
+  h += '<div class="fld"><span>問題の選び方</span><div class="offs">';
+  [["all", "すべて"], ["new", "まだ解いていない問題"], ["ng", "間違えた(×)問題"], ["due", "復習の日が来た問題"]].forEach(function (x) { h += '<label class="chk"><input type="radio" name="fpick" data-fp="pick" value="' + x[0] + '"' + (f.pick === x[0] ? " checked" : "") + ">" + x[1] + "</label>"; });
+  h += '</div></div><div class="fld"><span>問題の数</span><select data-fp="n">';
+  [[5, "5問"], [10, "10問"], [20, "20問"], [0, "すべて"]].forEach(function (x) { h += '<option value="' + x[0] + '"' + (f.n === x[0] ? " selected" : "") + ">" + x[1] + "</option>"; });
+  h += '</select></div><label class="chk"><input type="checkbox" data-fp="shuffle"' + (f.shuffle ? " checked" : "") + ">順番をランダムにする</label>";
+  h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
+  var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
+  h += '<p class="sub" id="fcount">この条件で出る問題: ' + n + "問</p>";
+  h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>";
   app.innerHTML = h; bar.hidden = true;
 }
 function move(d) {
@@ -460,7 +529,7 @@ function renderQuiz() {
   var timer = view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
-  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + " " + esc(p.t) + "</span>" + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
+  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + " " + esc(p.t) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
   if (isChoice) {
     h += '<div class="choices" role="group" aria-label="選択肢">';
     p.c.forEach(function (c, n) {
@@ -613,7 +682,19 @@ function handle(e) {
   else if (act === "next") move(1);
   else if (act === "begin") go("quiz", { revealed: false });
   else if (act === "gist") go("intro", {});
-  else if (act === "retry") startUnit(view.unit, true);
+  else if (act === "free") go("free", {});
+  else if (act === "fall") { subjById(view.subj).units.forEach(function (u) { view.free.units[u.id] = true; }); render(); }
+  else if (act === "fnone") { view.free.units = {}; render(); }
+  else if (act === "fstart") {
+    var its = itemsFor(view.free);
+    if (its.length) startMix(its, "自由練習", view.free.vary, view.subj);
+  }
+  else if (act === "retry") {
+    if (view.unit.src) {
+      var ngs = view.unit.src.filter(function (x) { return store.res[rkey(x.u, x.i)] === 0; });
+      if (ngs.length) startMix(ngs, view.unit.name, true, view.subj);
+    } else startUnit(view.unit, true);
+  }
   else if (act === "restart") go("quiz", { pos: 0, revealed: false });
   else if (act === "review-all") {
     var us = subjById(view.subj).units;
