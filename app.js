@@ -518,9 +518,9 @@ function weakModalHTML() {
 }
 function freeFormHTML() {
   var f = view.free, S = subjById(view.subj), h = "";
-  h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
+  h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span>' + '<div class="row"><button class="btn" data-act="fweak">苦手な単元を選ぶ</button><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div>' + '<div class="fpick">';
   S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・" + (c.ok + c.ng ? "正答率" + Math.round(100 * c.ok / (c.ok + c.ng)) + "%・" : "") + "×" + c.ng + ")</label>"; });
-  h += '</div><div class="row"><button class="btn" data-act="fweak">苦手な単元を選ぶ</button><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
+  h += '</div></div>';
   h += '<div class="fld"><span>問題の選び方</span><div class="offs">';
   [["all", "すべて"], ["new", "まだ解いていない問題"], ["ng", "間違えた(×)問題"], ["due", "復習の日が来た問題"]].forEach(function (x) { h += '<label class="chk"><input type="radio" name="fpick" data-fp="pick" value="' + x[0] + '"' + (f.pick === x[0] ? " checked" : "") + ">" + x[1] + "</label>"; });
   h += '</div></div><div class="fld"><span>問題の数</span><select data-fp="n">';
@@ -528,8 +528,8 @@ function freeFormHTML() {
   h += '</select></div><label class="chk"><input type="checkbox" data-fp="shuffle"' + (f.shuffle ? " checked" : "") + ">順番をランダムにする</label>";
   h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
-  h += '<p class="sub" id="fcount">この条件で出る問題: ' + n + "問</p>";
-  h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>" + weakModalHTML();
+  h += '<div class="stickycta"><span class="sub" id="fcount">この条件で出る問題: ' + n + "問</span>";
+  h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div></div>" + weakModalHTML();
   return h;
 }
 function renderFree() {
