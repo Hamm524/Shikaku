@@ -255,3 +255,11 @@ details.step:not(.cur) { background: transparent; }
 .freecta b { font-size: var(--t-md); }
 .freecta small { color: var(--ink-soft); font-size: var(--t-sm); }
 .freecta i { font-style: normal; color: var(--accent); font-size: var(--t-lg); }
+
+.seg3 { grid-template-columns: 1fr 1.4fr 1fr; }
+.seg3 button { padding: var(--s2) 2px; font-size: 12px; white-space: nowrap; }
+.stagebar { display: flex; align-items: center; gap: var(--s2); font-size: 12px; color: var(--ink-soft); margin: 0 0 var(--s3); padding: 0 var(--s1); }
+.stagebar .dots { display: inline-flex; gap: 4px; flex: none; }
+.stagebar .dots i { width: 14px; height: 5px; border-radius: 3px; background: var(--line); }
+.stagebar .dots i.d { background: var(--accent-tint); }
+.stagebar .dots i.c { background: var(--accent); }

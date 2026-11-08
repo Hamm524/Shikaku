@@ -364,6 +364,11 @@ function renderHome() {
   h += '<button class="examline" data-act="plan">' + (p && p.exam
     ? '<span class="ex-d">あと<b>' + daysLeft(p) + "</b>日</span><span>受験日 " + jd(p.exam) + (S.kinds ? "・" + (S.kinds.filter(function (k) { return k[0] === (p.kind || S.kinds[0][0]); })[0] || S.kinds[0])[1] : "") + "</span>"
     : "<span>受験日と勉強時間を入れて、予定を作る</span>") + '<i aria-hidden="true">›</i></button>';
+  if (S.units.some(function (u) { return u.id === "t1"; })) {
+    var cs = Math.min(curStep(), STEPS.length - 1), dots = "";
+    STEPS.forEach(function (St, i) { dots += '<i class="' + (i < cs ? "d" : i === cs ? "c" : "") + '"></i>'; });
+    h += '<div class="stagebar" aria-label="ロードマップの段階"><span class="dots">' + dots + "</span><span>いまの段階 " + (cs + 1) + "/" + STEPS.length + "・" + esc(STEPS[cs].name) + "</span></div>";
+  }
   // 今日やること
   var T = todayItems(), items = T.od.concat(T.td), label = "";
   h += '<section class="hero"><div class="eyebrow">今日やること</div>';
@@ -390,12 +395,11 @@ function renderHome() {
   h += "</section>";
   // 練習 / 模擬試験 の切り替え
   var mocks = S.units.filter(function (u) { return u.mock; }), hasMock = mocks.length > 0;
-  var mode = hasMock && lget("shk_mode") === "mock" ? "mock" : "practice";
-  if (hasMock) {
-    h += '<div class="seg" role="tablist" aria-label="表示の切り替え">' +
-      '<button role="tab" aria-selected="' + (mode === "practice") + '" class="' + (mode === "practice" ? "on" : "") + '" data-act="mode" data-v="practice">練習</button>' +
-      '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button></div>';
-  }
+  var mm = lget("shk_mode"), mode = mm === "mock" && hasMock ? "mock" : mm === "free" ? "free" : "units";
+  h += '<div class="seg' + (hasMock ? " seg3" : " seg2") + '" role="tablist" aria-label="練習のしかた">' +
+    '<button role="tab" aria-selected="' + (mode === "units") + '" class="' + (mode === "units" ? "on" : "") + '" data-act="mode" data-v="units">単元から学ぶ</button>' +
+    '<button role="tab" aria-selected="' + (mode === "free") + '" class="' + (mode === "free" ? "on" : "") + '" data-act="mode" data-v="free">自分で選んで解く</button>' +
+    (hasMock ? '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button>' : "") + "</div>";
   if (mode === "mock") {
     h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">90分の目安・5大問・100点(70点で合格)</span></div><p class="sub">仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
@@ -403,9 +407,10 @@ function renderHome() {
       h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">90分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
     });
     h += "</div></section>";
+  } else if (mode === "free") {
+    h += '<section class="usec"><div class="sechead"><h2>自分で選んで解く</h2><span class="sub">単元・問題数・選び方を決める</span></div>' + freeFormHTML() + "</section>";
   } else {
     // 単元の一覧(全体の進み具合を見出しに入れる)
-    h += '<button class="freecta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を自分で決める。間違えた問題の復習も</small></span><i aria-hidden="true">›</i></button>';
     var pct = sc.n ? Math.round((sc.ok + sc.ng) / sc.n * 100) : 0;
     h += '<section class="usec"><div class="sechead"><h2>単元</h2><span class="sub">' + (sc.ok + sc.ng) + " / " + sc.n + "問 解いた(" + pct + "%)</span></div>" +
       '<div class="bar thin"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div>';
@@ -495,8 +500,8 @@ function itemsFor(f) {
   if (f.n > 0) out = out.slice(0, f.n);
   return out;
 }
-function renderFree() {
-  var f = view.free, S = subjById(view.subj), h = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自由に練習する</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>';
+function freeFormHTML() {
+  var f = view.free, S = subjById(view.subj), h = "";
   h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
   S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・×" + c.ng + ")</label>"; });
   h += '</div><div class="row"><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
@@ -509,7 +514,10 @@ function renderFree() {
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
   h += '<p class="sub" id="fcount">この条件で出る問題: ' + n + "問</p>";
   h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>";
-  app.innerHTML = h; bar.hidden = true;
+  return h;
+}
+function renderFree() {
+  app.innerHTML = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自分で選んで解く</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>' + freeFormHTML(); bar.hidden = true;
 }
 function move(d) {
   var np = view.pos + d;
