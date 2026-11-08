@@ -272,3 +272,7 @@ details.step:not(.cur) { background: transparent; }
 .stickycta .sub { margin: 0; flex: 1; font-size: 13px; }
 .stickycta .btn { flex: none; }
 .fpick { max-height: 38vh; overflow-y: auto; }
+.fpick .chk { flex: none; }
+.fpick .chk .lv { flex: none; white-space: nowrap; align-self: flex-start; }
+.pform .row { flex-wrap: nowrap; gap: 6px; }
+.pform .row .btn { flex: 1; padding-left: 6px; padding-right: 6px; font-size: 13px; white-space: nowrap; }
