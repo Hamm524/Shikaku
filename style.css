@@ -249,3 +249,9 @@ details.step:not(.cur) { background: transparent; }
   .hero { padding: var(--s5); }
   .hero .hbtn, .hsec { max-width: 61.8%; }
 }
+
+.freecta { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); width: 100%; text-align: left; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 13px; padding: var(--s3) var(--s4); min-height: 55px; font: inherit; color: var(--ink); cursor: pointer; }
+.freecta span { display: flex; flex-direction: column; gap: 2px; }
+.freecta b { font-size: var(--t-md); }
+.freecta small { color: var(--ink-soft); font-size: var(--t-sm); }
+.freecta i { font-style: normal; color: var(--accent); font-size: var(--t-lg); }
