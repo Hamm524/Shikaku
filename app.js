@@ -405,6 +405,7 @@ function renderHome() {
     h += "</div></section>";
   } else {
     // 単元の一覧(全体の進み具合を見出しに入れる)
+    h += '<button class="freecta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を自分で決める。間違えた問題の復習も</small></span><i aria-hidden="true">›</i></button>';
     var pct = sc.n ? Math.round((sc.ok + sc.ng) / sc.n * 100) : 0;
     h += '<section class="usec"><div class="sechead"><h2>単元</h2><span class="sub">' + (sc.ok + sc.ng) + " / " + sc.n + "問 解いた(" + pct + "%)</span></div>" +
       '<div class="bar thin"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div>';
@@ -421,14 +422,10 @@ function renderHome() {
     } else {
       S.units.forEach(function (u) { h += unitBtn(u); });
     }
-    h += '<button class="ghost" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を自分で決める</small></span><i aria-hidden="true">›</i></button>';
     h += "</section>";
   }
   // 下の小さなリンク
   h += '<footer class="hfoot"><button class="link" data-act="data">データの保存・合言葉・設定</button>';
-  if (ONLY) {
-    [["boki", "簿記2級"], ["itpass", "ITパスポート"], ["html5", "HTML5"]].forEach(function (x) { if (x[0] !== ONLY) h += '<a class="link" href="../' + x[0] + '/">' + x[1] + "</a>"; });
-  }
   h += "</footer>";
   app.innerHTML = h; bar.hidden = true;
 }
