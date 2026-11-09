@@ -528,7 +528,7 @@ function freeFormHTML() {
   h += '</select></div><label class="chk"><input type="checkbox" data-fp="shuffle"' + (f.shuffle ? " checked" : "") + ">順番をランダムにする</label>";
   h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
-  h += '<div class="stickycta"><span class="sub" id="fcount">この条件で出る問題: ' + n + "問</span>";
+  h += '<div class="stickycta"><span class="sub" id="fcount">出る問題: ' + n + "問</span>";
   h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div></div>" + weakModalHTML();
   return h;
 }
