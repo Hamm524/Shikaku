@@ -519,7 +519,7 @@ function weakModalHTML() {
 function freeFormHTML() {
   var f = view.free, S = subjById(view.subj), h = "";
   h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span>' + '<div class="row"><button class="btn" data-act="fweak">苦手な単元を選ぶ</button><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div>' + '<div class="fpick">';
-  S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・" + (c.ok + c.ng ? "正答率" + Math.round(100 * c.ok / (c.ok + c.ng)) + "%・" : "") + "×" + c.ng + ")</label>"; });
+  S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問" + (c.ok + c.ng ? "・正答率" + Math.round(100 * c.ok / (c.ok + c.ng)) + "%" : "") + (c.ng ? "・×" + c.ng : "") + ")</label>"; });
   h += '</div></div>';
   h += '<div class="fld"><span>問題の選び方</span><div class="offs">';
   [["all", "すべて"], ["new", "まだ解いていない問題"], ["ng", "間違えた(×)問題"], ["due", "復習の日が来た問題"]].forEach(function (x) { h += '<label class="chk"><input type="radio" name="fpick" data-fp="pick" value="' + x[0] + '"' + (f.pick === x[0] ? " checked" : "") + ">" + x[1] + "</label>"; });
