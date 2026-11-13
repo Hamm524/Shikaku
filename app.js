@@ -34,7 +34,7 @@ var STEPS = [
 var KEY = "shikaku-v1";
 function normalize(o) {
   o = o || {};
-  var s = { res: o.res || {}, memo: o.memo || {}, time: o.time || {}, plans: o.plans || {}, pts: o.pts || {}, rev: o.rev || {}, ts: o.ts || 0 };
+  var s = { res: o.res || {}, memo: o.memo || {}, time: o.time || {}, plans: o.plans || {}, pts: o.pts || {}, rev: o.rev || {}, ut: o.ut || {}, ts: o.ts || 0 };
   if (o.plan && !s.plans.boki) s.plans.boki = o.plan;
   return s;
 }
@@ -148,6 +148,12 @@ function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&
 function rkey(u, i) { return u.src ? rkey(u.src[i].u, u.src[i].i) : u.id + "-" + i; }
 function mins(u, p) { return p.m || u.dm; }
 function unitMins(u) { var s = 0; u.ps.forEach(function (p) { s += mins(u, p); }); return s; }
+/* 単元ごとの目標時間(ut が true の単元だけ。分。自分で変えられる) */
+function unitTarget(u) { var v = u.ut && store.ut[u.id]; return v > 0 ? v : unitMins(u); }
+function newSession(u) { view.us = u.ut ? { id: u.id, ms: 0, last: Date.now(), running: true } : null; }
+function usElapsed() { var a = view.us; return a ? a.ms + (a.running ? Date.now() - a.last : 0) : 0; }
+function usFreeze() { var a = view.us; if (a && a.running) { a.ms = usElapsed(); a.running = false; } }
+function usOn(u) { return !!(u && u.ut && view.us && view.us.id === u.id); }
 function fmtMin(n) { return (Math.round(n * 10) / 10) + "分"; }
 function fmt(ms) { var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s = s % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
 function counts(u) {
@@ -179,11 +185,12 @@ function journalHTML(line) {
 function curElapsed() { return view.elapsed + (view.running ? Date.now() - view.last : 0); }
 function resetTimer() { view.elapsed = 0; view.last = Date.now(); view.running = true; }
 // 単元の練習は、「スタート」を押すまで問題を隠し、時間も止めておく(模擬試験は今までどおり)
-function gateOn(u) { return !u.mock && lget("shk_gate") !== "0"; }
+function gateOn(u) { return !u.mock && !u.ut && lget("shk_gate") !== "0"; }
 function startQuestion() { view.waiting = false; view.last = Date.now(); view.running = true; render(); }
 function go(name, extra) {
   for (var k in extra) view[k] = extra[k];
   view.name = name;
+  if (name !== "quiz") usFreeze();
   if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
   render(); window.scrollTo(0, 0);
 }
@@ -197,7 +204,10 @@ function render() {
   else renderDone();
 }
 setInterval(function () {
-  if (view.name !== "quiz" || view.revealed || !view.running) return;
+  if (view.name !== "quiz") return;
+  var ue0 = document.getElementById("utm");
+  if (ue0 && usOn(view.unit)) { var u0 = view.unit; ue0.textContent = fmt(usElapsed()); ue0.className = "tm" + (usElapsed() > unitTarget(u0) * 60000 ? " over" : ""); return; }
+  if (view.revealed || !view.running) return;
   var el = document.getElementById("tm");
   if (!el) return;
   var u = view.unit, p = u.ps[view.list[view.pos]], ms = curElapsed();
@@ -288,7 +298,9 @@ function planRow(u, date, m) {
     '<input type="date" data-pf="date" data-id="' + u.id + '" value="' + esc(date) + '"></div>';
 }
 function onChange(e) {
-  var t = e.target, fp = t.getAttribute && t.getAttribute("data-fp");
+  var t = e.target, utid = t.getAttribute && t.getAttribute("data-ut");
+  if (utid) { var v = Math.max(1, Math.min(300, Math.round(+t.value || 0))); if (v) store.ut[utid] = v; save(); render(); return; }
+  var fp = t.getAttribute && t.getAttribute("data-fp");
   if (fp) {
     var F = view.free;
     if (fp === "unit") { if (t.checked) F.units[t.getAttribute("data-id")] = true; else delete F.units[t.getAttribute("data-id")]; }
@@ -322,7 +334,7 @@ function unitBtn(u) {
   var c = counts(u);
   return '<button class="unit" data-act="open" data-id="' + u.id + '"><div class="top"><span class="name">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + '</span><span class="weeks">' + (c.rest === 0 ? "完了" : "") + "</span></div>" +
     '<div class="bar"><i class="ok" style="width:' + (c.ok / c.n * 100) + '%"></i><i class="ng" style="width:' + (c.ng / c.n * 100) + '%"></i></div>' +
-    '<div class="stat"><span>' + c.n + "問・目安 " + fmtMin(unitMins(u)) + "</span><span>○ " + c.ok + "</span><span>× " + c.ng + "</span><span>未解答 " + c.rest + "</span></div></button>";
+    '<div class="stat"><span>' + c.n + "問・" + (u.ut ? "目標 " + fmtMin(unitTarget(u)) : "目安 " + fmtMin(unitMins(u))) + "</span><span>○ " + c.ok + "</span><span>× " + c.ng + "</span><span>未解答 " + c.rest + "</span></div></button>";
 }
 function curStep() {
   var now = new Date(), y = now.getFullYear();
@@ -461,6 +473,7 @@ function startUnit(u, onlyNg) {
   u.ps.forEach(function (p, i) { if (due ? dueSet.indexOf(i) >= 0 : (!onlyNg || store.res[rkey(u, i)] === 0)) list.push(i); });
   if (!list.length) list = u.ps.map(function (p, i) { return i; });
   view.mode = due ? "due" : "";
+  if (!onlyNg && !due) newSession(u); else view.us = null;
   var first = 0;
   if (!onlyNg && !due) { for (var n = 0; n < list.length; n++) { if (store.res[rkey(u, list[n])] === undefined) { first = n; break; } } }
   if (u.gist && !onlyNg && !due) go("intro", { unit: u, list: list, pos: first, revealed: false });
@@ -571,7 +584,13 @@ function renderQuiz() {
     bar.hidden = false; return;
   }
   var target = mins(u, p), took = store.time[k];
-  var timer = view.revealed
+  var utimer = "";
+  if (usOn(u)) {
+    var tg = unitTarget(u), pace = tg / view.list.length, dn = view.pos + (view.revealed ? 1 : 0);
+    utimer = '<div class="timerrow"><span class="tm' + (usElapsed() > tg * 60000 ? " over" : "") + '" id="utm" role="timer">' + fmt(usElapsed()) + '</span><span class="target">単元の目標 <input type="number" class="utin" data-ut="' + u.id + '" min="1" max="300" step="1" value="' + Math.round(tg) + '" aria-label="単元の目標時間(分)">分</span><button class="link" data-act="tpause" id="tpause">' + (view.us.running ? "一時停止" : "再開") + "</button></div>" +
+      '<p class="took">1問あたり 約 ' + fmtMin(pace) + "・" + dn + "問目までの目標は " + fmtMin(pace * dn) + "</p>";
+  }
+  var timer = utimer ? utimer : view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
   h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + " " + esc(p.t) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
@@ -621,7 +640,8 @@ function renderDone() {
     h += '</div><p class="sub">点が低かった大問から、解説を読み直しましょう。</p><div class="row"><button class="btn primary" data-act="retry">点が足りない問題だけ解き直す</button><button class="btn" data-act="home">一覧へ</button></div></div>';
     app.innerHTML = h; bar.hidden = true; return;
   }
-  h += '<div class="card result"><span class="tag">' + esc(u.name) + '</span><div class="big">' + ok + " / " + view.list.length + '問 できた</div>' +
+  var tt = usOn(u) ? '<p class="sub">かかった時間 <b>' + fmt(usElapsed()) + "</b>(目標 " + fmtMin(unitTarget(u)) + (usElapsed() > unitTarget(u) * 60000 ? "・少しオーバー" : "・目標内") + ")</p>" : "";
+  h += '<div class="card result"><span class="tag">' + esc(u.name) + '</span><div class="big">' + ok + " / " + view.list.length + '問 できた</div>' + tt +
     '<p class="sub">' + (ng ? "× の問題が" + ng + "問あります。解説を読んでから、もう一度解いてみましょう。" : "すべて○です。次の単元に進みましょう。") + "</p>" +
     '<div class="row">' + (ng ? '<button class="btn primary" data-act="retry">× だけ解き直す</button>' : "") + '<button class="btn" data-act="restart">最初から解く</button><button class="btn" data-act="home">一覧へ</button></div></div>';
   app.innerHTML = h; bar.hidden = true;
@@ -718,6 +738,7 @@ function handle(e) {
   else if (act === "autoplan") { var pp = getPlan(view.subj); pp.dates = autoPlan(view.subj, pp); store.plans[view.subj] = pp; save(); render(); }
   else if (act === "jump") go("quiz", { pos: +t.getAttribute("data-n"), revealed: false });
   else if (act === "tpause") {
+    if (usOn(view.unit)) { var us = view.us; if (us.running) { us.ms = usElapsed(); us.running = false; } else { us.last = Date.now(); us.running = true; } }
     if (view.running) { view.elapsed = curElapsed(); view.running = false; } else { view.last = Date.now(); view.running = true; }
     render();
   }
@@ -754,7 +775,7 @@ function handle(e) {
       if (ngs.length) startMix(ngs, view.unit.name, true, view.subj);
     } else startUnit(view.unit, true);
   }
-  else if (act === "restart") go("quiz", { pos: 0, revealed: false });
+  else if (act === "restart") { newSession(view.unit); go("quiz", { pos: 0, revealed: false }); }
   else if (act === "review-all") {
     var ni = []; subjById(view.subj).units.forEach(function (u) { u.ps.forEach(function (p, i) { if (store.res[rkey(u, i)] === 0) ni.push({ u: u, i: i }); }); });
     if (ni.length) startMix(ni, "×の解き直し", true, view.subj);

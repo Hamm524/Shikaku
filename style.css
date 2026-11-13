@@ -290,3 +290,4 @@ details.step:not(.cur) { background: transparent; }
 .lv-l1{background:rgba(43,95,217,.14);color:#2b5fd9}.lv-l2{background:rgba(217,98,43,.16);color:#b0481a}
 @media (prefers-color-scheme:dark){.lv-l1{color:#8fb0ff}.lv-l2{color:#f0a070}}
 .card > .lv{align-self:flex-start}
+.utin{width:4.2em;font:inherit;padding:2px 6px;margin:0 3px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right}
