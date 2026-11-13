@@ -6,7 +6,8 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", unk: true, goal: 70, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
+  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];

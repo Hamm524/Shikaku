@@ -1,7 +1,7 @@
 {
-  "name": "HTML5ドリル",
-  "short_name": "HTML5ドリル",
-  "description": "HTML5プロフェッショナル レベル2の練習問題",
+  "name": "HTML5 レベル1ドリル",
+  "short_name": "HTML5 Lv1",
+  "description": "HTML5プロフェッショナル レベル1の練習問題",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,21 @@
   "theme_color": "#d9622b",
   "lang": "ja",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
