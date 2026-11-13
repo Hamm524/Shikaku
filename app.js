@@ -500,6 +500,22 @@ function itemsFor(f) {
   if (f.n > 0) out = out.slice(0, f.n);
   return out;
 }
+function weakList() {
+  var wk = subjById(view.subj).units.map(function (u) { var c = counts(u); return { u: u, c: c, rate: c.ng / Math.max(1, c.ok + c.ng) }; }).filter(function (x) { return x.c.ng > 0; });
+  wk.sort(function (a, b) { return b.rate - a.rate || b.c.ng - a.c.ng; });
+  return wk.map(function (x, i) { x.on = i < 3; return x; });
+}
+function weakModalHTML() {
+  var w = view.weak; if (!w) return "";
+  var h = '<div class="modal" role="dialog" aria-modal="true" aria-label="苦手な単元"><div class="mbox"><h2>苦手な単元</h2>';
+  if (!w.length) h += '<p class="sub">まだ×の問題がありません。いくつか解いてから使えます。</p><div class="row"><button class="btn primary" data-act="wcancel">閉じる</button></div>';
+  else {
+    h += '<p class="sub">正答率が低い順です。上位3つにチェックを入れました。外したり足したりできます。</p><div class="fpick">';
+    w.forEach(function (x) { h += '<label class="chk"><input type="checkbox" data-wk="' + x.u.id + '"' + (x.on ? " checked" : "") + ">" + esc(x.u.name) + "(正答率" + Math.round(100 * (1 - x.rate)) + "%・×" + x.c.ng + ")</label>"; });
+    h += '</div><div class="row"><button class="btn primary" data-act="wok">この単元で決める</button><button class="btn" data-act="wcancel">やめる</button></div>';
+  }
+  return h + "</div></div>";
+}
 function freeFormHTML() {
   var f = view.free, S = subjById(view.subj), h = "";
   h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
@@ -513,7 +529,7 @@ function freeFormHTML() {
   h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
   h += '<p class="sub" id="fcount">この条件で出る問題: ' + n + "問</p>";
-  h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>";
+  h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>" + weakModalHTML();
   return h;
 }
 function renderFree() {
@@ -706,11 +722,13 @@ function handle(e) {
   }
   else if (act === "mode") { lset("shk_mode", t.getAttribute("data-v")); render(); }
   else if (act === "fall") { subjById(view.subj).units.forEach(function (u) { view.free.units[u.id] = true; }); render(); }
-  else if (act === "fweak") {
-    var wk = subjById(view.subj).units.map(function (u) { var c = counts(u); return { id: u.id, ng: c.ng, rate: c.ng / Math.max(1, c.ok + c.ng) }; }).filter(function (x) { return x.ng > 0; });
-    wk.sort(function (a, b) { return b.rate - a.rate || b.ng - a.ng; });
-    view.free.units = {}; wk.slice(0, 3).forEach(function (x) { view.free.units[x.id] = true; });
-    if (wk.length) view.free.pick = "ng"; render();
+  else if (act === "fweak") { view.weak = weakList(); render(); }
+  else if (act === "wcancel") { view.weak = null; render(); }
+  else if (act === "wok") {
+    var ids = {}, any = false;
+    app.querySelectorAll("input[data-wk]").forEach(function (el) { if (el.checked) { ids[el.getAttribute("data-wk")] = true; any = true; } });
+    if (any) { view.free.units = ids; view.free.pick = "ng"; }
+    view.weak = null; render();
   }
   else if (act === "fnone") { view.free.units = {}; render(); }
   else if (act === "fstart") {
