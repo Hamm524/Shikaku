@@ -292,3 +292,10 @@ details.step:not(.cur) { background: transparent; }
 .card > .lv{align-self:flex-start}
 .utin{width:4.2em;font:inherit;padding:2px 6px;margin:0 3px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right}
 .btn.unk{background:transparent;color:var(--ink-soft);border-style:dashed;flex:none}
+
+/* 模擬試験(本番の形式) */
+.choice.sel { background: var(--accent-tint); border-color: var(--accent); }
+.choice.sel .cn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.exdots { gap: 5px; }
+.dot.ans { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.topbar .tm { font-size: 1.1rem; }
