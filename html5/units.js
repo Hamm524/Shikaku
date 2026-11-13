@@ -1,4 +1,4 @@
-/* HTML5プロフェッショナル認定試験 レベル2の問題データ(サンプル。順に増やします)。レベル1は units-l1.js。
+/* HTML5プロフェッショナル認定試験 レベル2の問題データ(サンプル。順に増やします)。レベル1は units-l1.js(別のページ)。
    c=選択肢、k=正解の番号(0始まり)。code=記述問題の模範解答(別解も正解になり得ます) */
 var HTML5 = [
 {id:"h1",group:"レベル2",lv:"Lv2",lvc:"l2",lvn:"レベル2のサンプル問題",name:"要素と文書構造",dm:3,ps:[
@@ -16,5 +16,3 @@ var HTML5 = [
 {t:"イベント処理",q:"id が btn のボタンをクリックしたとき、id が msg の要素のテキストを「こんにちは」に変えるJavaScriptを、addEventListener を使って記述しなさい。",code:"document.getElementById(\"btn\").addEventListener(\"click\", function () {\n  document.getElementById(\"msg\").textContent = \"こんにちは\";\n});",e:"getElementById で要素を取り、addEventListener(\"click\", ...) で処理を登録します。アロー関数や querySelector を使う書き方でも正解です。",m:5}
 ]}
 ];
-/* レベル1を先に、レベル2を後に並べる */
-if (typeof HTML5_L1 !== "undefined") HTML5 = HTML5_L1.concat(HTML5);
