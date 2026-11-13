@@ -276,3 +276,14 @@ details.step:not(.cur) { background: transparent; }
 .fpick .chk .lv { flex: none; white-space: nowrap; align-self: flex-start; }
 .pform .row { flex-wrap: nowrap; gap: 6px; }
 .pform .row .btn { flex: 1; padding-left: 6px; padding-right: 6px; font-size: 13px; white-space: nowrap; }
+/* ボタンの役割分け: 操作=文字だけ / 選択肢=選ぶと色が付く / 開始=塗りつぶし */
+.pform .row { gap: var(--s3); justify-content: flex-start; }
+.pform .row .btn { flex: none; border: 0; background: none; color: var(--accent); font-weight: 700; font-size: 13px; min-height: 32px; padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px; }
+.pform .row .btn[data-act="fweak"] { background: var(--accent-tint); text-decoration: none; border-radius: 999px; padding: 4px 12px; }
+.pform .chk:has(input:checked) { background: var(--accent-tint); border-color: var(--accent); }
+.pform .offs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pform .offs .chk { justify-content: center; text-align: center; font-size: 14px; }
+.pform .offs .chk input { position: absolute; opacity: 0; pointer-events: none; }
+.pform .offs .chk { position: relative; }
+.pform .offs .chk:has(input:checked) { font-weight: 700; color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+.stickycta .btn.primary { min-height: 50px; padding: 0 var(--s4); font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
