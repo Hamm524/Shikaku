@@ -267,3 +267,8 @@ details.step:not(.cur) { background: transparent; }
 .modal { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: var(--s4); }
 .mbox { background: var(--bg, #fff); color: var(--ink); border-radius: 16px; padding: var(--s4); width: 100%; max-width: 420px; max-height: 85vh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
 .mbox h2 { margin: 0 0 var(--s2); }
+
+.stickycta { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; gap: var(--s3); margin: 0 -20px -20px; padding: var(--s3) 20px calc(var(--s3) + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; }
+.stickycta .sub { margin: 0; flex: 1; font-size: 13px; }
+.stickycta .btn { flex: none; }
+.fpick { max-height: 38vh; overflow-y: auto; }
