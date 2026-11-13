@@ -349,14 +349,26 @@ function todayItems() {
   return { od: od, td: td, up: up };
 }
 function renderHome() {
+  /* 視線の流れ: ①今日やること(主役・1つだけ色の面) → ②練習/模擬の切り替え → ③単元の一覧。
+     余白は黄金比(8・13・21・34px)、文字は1.618倍の段差(13→16→21→26px)で強弱をつける。 */
   var sid = view.subj, S = subjById(sid), sc = subjCounts(sid), i;
-  var h = '<div class="head"><h1>' + esc(ONLY ? S.title : "資格ドリル") + '</h1><button class="link" data-act="data" id="cstat">' + esc(stateText()) + "</button></div>";
+  var p = store.plans[sid], has = p && planEntries(sid).length > 0;
+  var h = '<header class="hhead"><h1>' + esc(ONLY ? S.title : "資格ドリル") + '</h1><button class="link" data-act="data" id="cstat">' + esc(stateText()) + "</button></header>";
   if (!lget("shk_noted")) {
     h += '<div class="codebox"><b>この合言葉を、メモしてください</b><div class="code">' + esc(showCode(cloud.code)) + '</div><span class="sub">記録は、この合言葉で自動保存されます。端末が変わったり、記録が消えたりしたときは、この合言葉で戻せます。ログインは不要です。</span>' +
       '<div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn primary" data-act="noted">メモした</button></div><button class="link" data-act="data">すでに合言葉がある(別の端末や、ほかの科目で使っている)</button><span class="sub" id="cmsg"></span></div>';
   }
   if (SUBJECTS.length > 1) h += subjTabs(sid, "tab");
   if (S.note) h += '<p class="sub">' + esc(S.note) + "</p>";
+  // 受験日(1行の小さな表示。押すと学習計画へ)
+  h += '<button class="examline" data-act="plan">' + (p && p.exam
+    ? '<span class="ex-d">あと<b>' + daysLeft(p) + "</b>日</span><span>受験日 " + jd(p.exam) + (S.kinds ? "・" + (S.kinds.filter(function (k) { return k[0] === (p.kind || S.kinds[0][0]); })[0] || S.kinds[0])[1] : "") + "</span>"
+    : "<span>受験日と勉強時間を入れて、予定を作る</span>") + '<i aria-hidden="true">›</i></button>';
+  if (S.units.some(function (u) { return u.id === "t1"; })) {
+    var cs = Math.min(curStep(), STEPS.length - 1), dots = "";
+    STEPS.forEach(function (St, i) { dots += '<i class="' + (i < cs ? "d" : i === cs ? "c" : "") + '"></i>'; });
+    h += '<div class="stagebar" aria-label="ロードマップの段階"><span class="dots">' + dots + "</span><span>いまの段階 " + (cs + 1) + "/" + STEPS.length + "・" + esc(STEPS[cs].name) + "</span></div>";
+  }
   // 今日やること
   var T = todayItems(), items = T.od.concat(T.td), label = "";
   h += '<section class="hero"><div class="eyebrow">今日やること</div>';
@@ -373,52 +385,53 @@ function renderHome() {
       '<button class="btn hbtn" data-act="open" data-id="' + nx.u.id + '">' + (nx.c.ok + nx.c.ng ? "続きから始める" : "始める") + "</button>";
     else h += '<div class="hname">' + esc(S.short) + "は全部解きました</div><div class=\"hsub\">×の問題を解き直しましょう。</div>";
   }
-  if (sc.ng) h += '<button class="hlink" data-act="review-all">× の問題だけ解き直す(' + esc(S.short) + " " + sc.ng + "問)</button>";
-  h += "</section>";
-  h += '<button class="plancta" data-act="free"><span><b>自由に練習する</b><small>単元・問題数・選び方を決めて出す。間違えた問題の復習も</small></span><i>›</i></button>';
   var dsum = dueSummary(sid);
-  if (dsum.total) {
-    h += '<section class="card"><b>今日の復習 ' + dsum.total + '問</b><span class="sub">間違えた問題を、間をあけて解き直すと忘れにくくなります。</span>';
-    dsum.list.forEach(function (x) { h += '<button class="hl" data-act="due" data-id="' + x.u.id + '">' + esc(x.u.name) + "(" + x.n + "問)</button>"; });
-    h += "</section>";
+  if (dsum.total || sc.ng) {
+    h += '<div class="hsec">';
+    if (dsum.total) h += '<button class="hchip" data-act="due-all"><b>今日の復習 ' + dsum.total + "問</b><small>数字を変えて出します</small></button>";
+    else if (sc.ng) h += '<button class="hchip" data-act="review-all"><b>×の問題を解き直す ' + sc.ng + "問</b><small>間違えた問題だけ</small></button>";
+    h += "</div>";
   }
-  // 計画
-  var p = store.plans[sid], has = p && planEntries(sid).length > 0;
-  h += '<button class="plancta" data-act="plan"><span><b>' + esc(S.short) + "の学習計画を" + (has ? "見る・変える" : "立てる") + "</b><small>" + (p && p.exam ? "受験日 " + jd(p.exam) + (S.kinds ? "(" + (S.kinds.filter(function (k) { return k[0] === (p.kind || S.kinds[0][0]); })[0] || S.kinds[0])[1] + ")" : "") + "・あと" + daysLeft(p) + "日" : "受験日と勉強時間を入れると、日ごとの予定を作ります") + "</small></span><i>›</i></button>";
-  // 模擬試験
-  var mocks = S.units.filter(function (u) { return u.mock; });
-  if (mocks.length) {
-    h += '<section class="mockbox"><div class="mhead"><h2>模擬試験</h2><span class="mtag">本番と同じ90分・5大問</span></div><p class="sub">仕上げに使います。通しで解いて、間違いを見直してください。</p><div class="mgrid">';
+  h += "</section>";
+  // 練習 / 模擬試験 の切り替え
+  var mocks = S.units.filter(function (u) { return u.mock; }), hasMock = mocks.length > 0;
+  var mm = lget("shk_mode"), mode = mm === "mock" && hasMock ? "mock" : mm === "free" ? "free" : "units";
+  h += '<div class="seg' + (hasMock ? " seg3" : " seg2") + '" role="tablist" aria-label="練習のしかた">' +
+    '<button role="tab" aria-selected="' + (mode === "units") + '" class="' + (mode === "units" ? "on" : "") + '" data-act="mode" data-v="units">単元から学ぶ</button>' +
+    '<button role="tab" aria-selected="' + (mode === "free") + '" class="' + (mode === "free" ? "on" : "") + '" data-act="mode" data-v="free">自分で選んで解く</button>' +
+    (hasMock ? '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button>' : "") + "</div>";
+  if (mode === "mock") {
+    h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">90分の目安・5大問・100点(70点で合格)</span></div><p class="sub">仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
       h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">90分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
     });
     h += "</div></section>";
-  }
-  h += '<div class="card" style="gap:10px"><div class="row" style="justify-content:space-between"><strong>' + esc(S.name) + " " + sc.n + '問</strong><span class="sub">○ ' + sc.ok + " / × " + sc.ng + " / 未解答 " + sc.rest + "</span></div>" +
-    '<div class="bar"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div></div>';
-  // 単元
-  h += '<section class="group"><h2>単元の一覧</h2>';
-  if (sid === "boki") {
-    var cur = curStep();
-    STEPS.forEach(function (St, i) {
-      var left = 0; St.ids.forEach(function (id) { left += counts(unitById(id)).rest; });
-      h += '<details class="step"' + (!has && i === Math.min(cur, STEPS.length - 1) ? " open" : "") + '><summary><span class="sn">' + (i + 1) + '</span><span class="stext"><b>' + esc(St.name) + "</b>" + (has ? "" : "<small>" + md(St.s) + "〜" + md(St.e) + "</small>") + "</span>" +
-        '<span class="sleft">' + (left ? "残り " + left + "問" : "完了") + "</span></summary>";
-      St.ids.forEach(function (id) { h += unitBtn(unitById(id)); });
-      h += "</details>";
-    });
+  } else if (mode === "free") {
+    h += '<section class="usec"><div class="sechead"><h2>自分で選んで解く</h2><span class="sub">単元・問題数・選び方を決める</span></div>' + freeFormHTML() + "</section>";
   } else {
-    S.units.forEach(function (u) { h += unitBtn(u); });
+    // 単元の一覧(全体の進み具合を見出しに入れる)
+    var pct = sc.n ? Math.round((sc.ok + sc.ng) / sc.n * 100) : 0;
+    h += '<section class="usec"><div class="sechead"><h2>単元</h2><span class="sub">' + (sc.ok + sc.ng) + " / " + sc.n + "問 解いた(" + pct + "%)</span></div>" +
+      '<div class="bar thin"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div>';
+    if (sid === "boki") {
+      var cur = curStep();
+      STEPS.forEach(function (St, i) {
+        var left = 0; St.ids.forEach(function (id) { left += counts(unitById(id)).rest; });
+        var isCur = i === Math.min(cur, STEPS.length - 1);
+        h += '<details class="step' + (isCur ? " cur" : "") + (left ? "" : " done") + '"' + (isCur ? " open" : "") + '><summary><span class="sn">' + (left ? i + 1 : "✓") + '</span><span class="stext"><b>' + esc(St.name) + "</b>" + (isCur ? "<small>いまの段階</small>" : "") + "</span>" +
+          '<span class="sleft">' + (left ? "残り " + left + "問" : "完了") + "</span></summary>";
+        St.ids.forEach(function (id) { h += unitBtn(unitById(id)); });
+        h += "</details>";
+      });
+    } else {
+      S.units.forEach(function (u) { h += unitBtn(u); });
+    }
+    h += "</section>";
   }
-  h += "</section>";
-  h += '<button class="btn" data-act="gate">単元の練習: スタートボタン ' + (lget("shk_gate") === "0" ? "なし(開くとすぐ開始)→ありにする" : "あり(押すまで問題を隠す)→なしにする") + "</button>";
-  h += '<button class="btn" data-act="data">データの保存・バックアップ・合言葉</button>';
-  if (ONLY) {
-    h += '<div class="others"><span class="sub">ほかの科目</span>';
-    [["boki", "簿記2級"], ["itpass", "ITパスポート"], ["html5", "HTML5"]].forEach(function (x) { if (x[0] !== ONLY) h += '<a class="olink" href="../' + x[0] + '/">' + x[1] + "</a>"; });
-    h += "</div>";
-  }
+  // 下の小さなリンク
+  h += '<footer class="hfoot"><button class="link" data-act="data">データの保存・合言葉・設定</button>';
+  h += "</footer>";
   app.innerHTML = h; bar.hidden = true;
 }
 
@@ -487,8 +500,8 @@ function itemsFor(f) {
   if (f.n > 0) out = out.slice(0, f.n);
   return out;
 }
-function renderFree() {
-  var f = view.free, S = subjById(view.subj), h = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自由に練習する</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>';
+function freeFormHTML() {
+  var f = view.free, S = subjById(view.subj), h = "";
   h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
   S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・×" + c.ng + ")</label>"; });
   h += '</div><div class="row"><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
@@ -501,7 +514,10 @@ function renderFree() {
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
   h += '<p class="sub" id="fcount">この条件で出る問題: ' + n + "問</p>";
   h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div>";
-  app.innerHTML = h; bar.hidden = true;
+  return h;
+}
+function renderFree() {
+  app.innerHTML = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自分で選んで解く</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>' + freeFormHTML(); bar.hidden = true;
 }
 function move(d) {
   var np = view.pos + d;
@@ -617,6 +633,7 @@ function renderData() {
   h += '<div class="card"><span class="sub" id="cstat">' + esc(stateText()) + '</span><b>あなたの合言葉</b><div class="code">' + esc(showCode(cloud.code)) + '</div><span class="sub">別の端末や、記録が消えたときは、この合言葉で戻せます。他の人には教えないでください。</span><div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn" data-act="sync-now">いま保存する</button></div><span class="sub" id="cmsg"></span></div>';
   h += '<div class="card"><b>合言葉で戻す</b><span class="sub">メモしておいた合言葉(10文字)を入れると、その記録に入れかえます。</span><input class="txt" id="codein" type="text" inputmode="latin" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="例: abcde-fghjk"><button class="btn primary" data-act="code-restore">この合言葉で戻す</button><span class="sub" id="rmsg"></span></div>';
   h += '<div class="card"><b>手元のバックアップ</b><span class="sub">念のため、進み具合を文字として控えておけます。</span><button class="btn" data-act="bk-copy">進み具合をコピーする</button><textarea id="bkbox" class="bkbox" placeholder="復元するときは、コピーした文字をここに貼り付けます"></textarea><button class="btn" data-act="bk-restore">貼り付けた内容から復元する</button><span class="sub" id="bkmsg"></span></div>';
+  h += '<div class="card"><b>練習の設定</b><span class="sub">単元の練習で、問題を開いたときの始め方を選べます。</span><button class="btn" data-act="gate">スタートボタン ' + (lget("shk_gate") === "0" ? "なし(開くとすぐ開始)→ありにする" : "あり(押すまで問題を隠す)→なしにする") + "</button></div>";
   h += '<div class="card"><b>新しい記録で始める</b><span class="sub">別の人が使うときなどに。今の記録は消えず、いまの合言葉で戻せます。</span><button class="btn" data-act="new-record">新しい記録で始める</button></div>';
   app.innerHTML = h; bar.hidden = true;
 }
@@ -683,6 +700,11 @@ function handle(e) {
   else if (act === "begin") go("quiz", { revealed: false });
   else if (act === "gist") go("intro", {});
   else if (act === "free") go("free", {});
+  else if (act === "due-all") {
+    var di = []; dueSummary(view.subj).list.forEach(function (x) { dueIndices(x.u).forEach(function (i) { di.push({ u: x.u, i: i }); }); });
+    if (di.length) startMix(di, "今日の復習", true, view.subj);
+  }
+  else if (act === "mode") { lset("shk_mode", t.getAttribute("data-v")); render(); }
   else if (act === "fall") { subjById(view.subj).units.forEach(function (u) { view.free.units[u.id] = true; }); render(); }
   else if (act === "fnone") { view.free.units = {}; render(); }
   else if (act === "fstart") {
@@ -697,8 +719,8 @@ function handle(e) {
   }
   else if (act === "restart") go("quiz", { pos: 0, revealed: false });
   else if (act === "review-all") {
-    var us = subjById(view.subj).units;
-    for (var i = 0; i < us.length; i++) { var c = counts(us[i]); if (c.ng) { startUnit(us[i], true); break; } }
+    var ni = []; subjById(view.subj).units.forEach(function (u) { u.ps.forEach(function (p, i) { if (store.res[rkey(u, i)] === 0) ni.push({ u: u, i: i }); }); });
+    if (ni.length) startMix(ni, "×の解き直し", true, view.subj);
   }
   else if (act === "noted") { lset("shk_noted", "1"); render(); }
   else if (act === "code-copy") copyText(cloud.code, function () { setMsg("cmsg", "コピーしました。メモに貼り付けてください。"); }, function () { setMsg("cmsg", "コピーできませんでした。表示の文字を書き写してください。"); });
