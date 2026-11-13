@@ -388,7 +388,7 @@ function renderHome() {
   var dsum = dueSummary(sid);
   if (dsum.total || sc.ng) {
     h += '<div class="hsec">';
-    if (dsum.total) h += '<button class="hchip" data-act="due-all"><b>今日の復習 ' + dsum.total + "問</b><small>数字を変えて出します</small></button>";
+    if (dsum.total) h += '<button class="hchip" data-act="due-all"><b>今日の復習 ' + dsum.total + "問</b><small>" + (hasVar(sid) ? "数字を変えて出します" : "復習の日が来た問題") + "</small></button>";
     else if (sc.ng) h += '<button class="hchip" data-act="review-all"><b>×の問題を解き直す ' + sc.ng + "問</b><small>間違えた問題だけ</small></button>";
     h += "</div>";
   }
@@ -465,6 +465,7 @@ function renderIntro() {
   app.innerHTML = h; bar.hidden = true;
 }
 /* ---------- 自由練習・復習(複数の単元を混ぜて出す) ---------- */
+function hasVar(sid) { return subjById(sid).units.some(function (u) { return u.ps.some(function (p) { return p.v && p.v.length; }); }); }
 function pickVariant(p) {
   if (!p.v || !p.v.length) return p;
   var v = p.v[Math.floor(Math.random() * p.v.length)], o = {};
@@ -526,14 +527,14 @@ function freeFormHTML() {
   h += '</div></div><div class="fld"><span>問題の数</span><select data-fp="n">';
   [[5, "5問"], [10, "10問"], [20, "20問"], [0, "すべて"]].forEach(function (x) { h += '<option value="' + x[0] + '"' + (f.n === x[0] ? " selected" : "") + ">" + x[1] + "</option>"; });
   h += '</select></div><label class="chk"><input type="checkbox" data-fp="shuffle"' + (f.shuffle ? " checked" : "") + ">順番をランダムにする</label>";
-  h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
+  if (hasVar(S.id)) h += '<label class="chk"><input type="checkbox" data-fp="vary"' + (f.vary ? " checked" : "") + ">解いたことのある問題は、数字を変えて出す(別バージョンがある問題のみ)</label>";
   var n = itemsFor({ units: f.units, pick: f.pick, n: f.n, shuffle: false }).length;
   h += '<div class="stickycta"><span class="sub" id="fcount">出る問題: ' + n + "問</span>";
   h += '<button class="btn primary" data-act="fstart"' + (n ? "" : " disabled") + ">この条件で始める</button></div></div>" + weakModalHTML();
   return h;
 }
 function renderFree() {
-  app.innerHTML = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自分で選んで解く</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。間違えた問題は、数字を変えた問題で復習できます。</p></div>' + freeFormHTML(); bar.hidden = true;
+  app.innerHTML = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>自分で選んで解く</h1><p class="sub">練習したい単元と、問題の選び方を決めて始めます。' + (hasVar(view.subj) ? "間違えた問題は、数字を変えた問題で復習できます。" : "間違えた問題だけを選んで解き直せます。") + '</p></div>' + freeFormHTML(); bar.hidden = true;
 }
 function move(d) {
   var np = view.pos + d;
