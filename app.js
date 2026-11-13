@@ -6,7 +6,7 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", unk: true, goal: 70, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -156,6 +156,13 @@ function usFreeze() { var a = view.us; if (a && a.running) { a.ms = usElapsed();
 function usOn(u) { return !!(u && u.ut && view.us && view.us.id === u.id); }
 /* 「わからない」ボタン(unk: true の科目だけ)。当てずっぽうで解いた問題を、×と同じ復習の流れに入れる */
 function unkOn(u) { var S = u && subjById(u.subj); return !!(S && S.unk) && !(u.mock); }
+/* 合格の目安(goal: 正答率の%)。解いた問題のうち、○の割合を出す */
+function goalOf(u) { var S = u && subjById(u.subj); return S && S.goal ? S.goal : 0; }
+function goalText(c, goal) {
+  var a = c.ok + c.ng; if (!goal || !a) return "";
+  var r = Math.round(100 * c.ok / a), done = c.rest === 0;
+  return "正答率 " + r + "%(目標 " + goal + "%)" + (r >= goal ? (done ? " ✓達成" : "・いまは目標以上") : "・あと少し");
+}
 function fmtMin(n) { return (Math.round(n * 10) / 10) + "分"; }
 function fmt(ms) { var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s = s % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
 function counts(u) {
@@ -336,7 +343,7 @@ function unitBtn(u) {
   var c = counts(u);
   return '<button class="unit" data-act="open" data-id="' + u.id + '"><div class="top"><span class="name">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + '</span><span class="weeks">' + (c.rest === 0 ? "完了" : "") + "</span></div>" +
     '<div class="bar"><i class="ok" style="width:' + (c.ok / c.n * 100) + '%"></i><i class="ng" style="width:' + (c.ng / c.n * 100) + '%"></i></div>' +
-    '<div class="stat"><span>' + c.n + "問・" + (u.ut ? "目標 " + fmtMin(unitTarget(u)) : "目安 " + fmtMin(unitMins(u))) + "</span><span>○ " + c.ok + "</span><span>× " + c.ng + "</span><span>未解答 " + c.rest + "</span></div></button>";
+    '<div class="stat"><span>' + c.n + "問・" + (u.ut ? "目標 " + fmtMin(unitTarget(u)) : "目安 " + fmtMin(unitMins(u))) + "</span><span>○ " + c.ok + "</span><span>× " + c.ng + "</span><span>未解答 " + c.rest + "</span>" + (goalOf(u) && c.ok + c.ng ? "<span>" + esc(goalText(c, goalOf(u))) + "</span>" : "") + "</div></button>";
 }
 function curStep() {
   var now = new Date(), y = now.getFullYear();
@@ -426,7 +433,7 @@ function renderHome() {
   } else {
     // 単元の一覧(全体の進み具合を見出しに入れる)
     var pct = sc.n ? Math.round((sc.ok + sc.ng) / sc.n * 100) : 0;
-    h += '<section class="usec"><div class="sechead"><h2>単元</h2><span class="sub">' + (sc.ok + sc.ng) + " / " + sc.n + "問 解いた(" + pct + "%)</span></div>" +
+    h += '<section class="usec"><div class="sechead"><h2>単元</h2><span class="sub">' + (sc.ok + sc.ng) + " / " + sc.n + "問 解いた(" + pct + "%)</span></div>" + (S.goal && sc.ok + sc.ng ? '<p class="sub">全体の' + esc(goalText(sc, S.goal)) + "</p>" : "") +
       '<div class="bar thin"><i class="ok" style="width:' + (sc.ok / sc.n * 100) + '%"></i><i class="ng" style="width:' + (sc.ng / sc.n * 100) + '%"></i></div>';
     if (sid === "boki") {
       var cur = curStep();
@@ -653,6 +660,8 @@ function renderDone() {
     app.innerHTML = h; bar.hidden = true; return;
   }
   var tt = usOn(u) ? '<p class="sub">かかった時間 <b>' + fmt(usElapsed()) + "</b>(目標 " + fmtMin(unitTarget(u)) + (usElapsed() > unitTarget(u) * 60000 ? "・少しオーバー" : "・目標内") + ")</p>" : "";
+  var gt = goalOf(u) ? goalText(counts(u), goalOf(u)) : "";
+  if (gt) tt += '<p class="sub"><b>' + esc(gt) + "</b>(合格の目安は7割です。公式の合格点ではありません)</p>";
   h += '<div class="card result"><span class="tag">' + esc(u.name) + '</span><div class="big">' + ok + " / " + view.list.length + '問 できた</div>' + tt +
     '<p class="sub">' + (ng ? "× の問題が" + ng + "問あります。解説を読んでから、もう一度解いてみましょう。" : "すべて○です。次の単元に進みましょう。") + "</p>" +
     '<div class="row">' + (ng ? '<button class="btn primary" data-act="retry">× だけ解き直す</button>' : "") + '<button class="btn" data-act="restart">最初から解く</button><button class="btn" data-act="home">一覧へ</button></div></div>';
