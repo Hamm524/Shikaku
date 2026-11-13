@@ -6,7 +6,7 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -154,6 +154,8 @@ function newSession(u) { view.us = u.ut ? { id: u.id, ms: 0, last: Date.now(), r
 function usElapsed() { var a = view.us; return a ? a.ms + (a.running ? Date.now() - a.last : 0) : 0; }
 function usFreeze() { var a = view.us; if (a && a.running) { a.ms = usElapsed(); a.running = false; } }
 function usOn(u) { return !!(u && u.ut && view.us && view.us.id === u.id); }
+/* 「わからない」ボタン(unk: true の科目だけ)。当てずっぽうで解いた問題を、×と同じ復習の流れに入れる */
+function unkOn(u) { var S = u && subjById(u.subj); return !!(S && S.unk) && !(u.mock); }
 function fmtMin(n) { return (Math.round(n * 10) / 10) + "分"; }
 function fmt(ms) { var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s = s % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
 function counts(u) {
@@ -191,7 +193,7 @@ function go(name, extra) {
   for (var k in extra) view[k] = extra[k];
   view.name = name;
   if (name !== "quiz") usFreeze();
-  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
+  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; view.mark = ""; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
   render(); window.scrollTo(0, 0);
 }
 function render() {
@@ -602,11 +604,19 @@ function renderQuiz() {
       h += '<button class="' + cls + '" data-act="pick" data-n="' + n + '"' + (view.revealed ? " disabled" : "") + '><span class="cn">' + (n + 1) + "</span><span>" + esc(c) + "</span></button>";
     });
     h += "</div>";
-    if (view.revealed) h += '<p class="verdict ' + (view.picked === p.k ? "good" : "bad") + '">' + (view.picked === p.k ? "○ 正解です" : "× 不正解です。正解は " + (p.k + 1) + " 番") + "</p>";
+    if (view.revealed) {
+      if (view.mark === "unk") h += '<p class="verdict bad">わからない → 復習に入れました。正解は ' + (p.k + 1) + " 番です。解説を読んで、覚えましょう。</p>";
+      else if (view.mark === "guess") h += '<p class="verdict bad">当てずっぽう → 復習に入れました。解説を読んで、覚えましょう。</p>';
+      else {
+        h += '<p class="verdict ' + (view.picked === p.k ? "good" : "bad") + '">' + (view.picked === p.k ? "○ 正解です" : "× 不正解です。正解は " + (p.k + 1) + " 番") + "</p>";
+        if (view.picked === p.k && unkOn(u)) h += '<button class="btn" data-act="guess">当てずっぽうだった(復習に入れる)</button>';
+      }
+    }
   } else {
     h += '<div><label class="memo" for="memo">' + (isCode ? "自分の答え(コードを書く。この端末と合言葉に保存)" : "自分の答え・計算メモ(保存されます)") + '</label><textarea id="memo" class="' + (isCode ? "mono" : "") + '" spellcheck="false" placeholder="' + (isCode ? "ここにコードを書いてから、答えを見ましょう" : "ここに仕訳や計算を書いてから、答えを見ましょう") + '">' + esc(store.memo[k] || "") + "</textarea></div>";
   }
   if (view.revealed) {
+    if (!isChoice && view.mark === "unk") h += '<p class="verdict bad">わからない → 復習に入れました。模範解答と解説を読んで、覚えましょう。</p>';
     h += '<div class="answer">';
     if (!isChoice) h += "<h3>" + (isCode ? "模範解答" : "解答") + "</h3>" + (isCode ? '<pre class="codeans">' + esc(p.code) + "</pre>" : p.a.map(journalHTML).join(""));
     h += '<div class="expl"><b>解説</b>' + esc(p.e) + "</div>";
@@ -615,12 +625,14 @@ function renderQuiz() {
   }
   h += "</article>";
   if (window.matchMedia && window.matchMedia("(hover:hover) and (pointer:fine)").matches) {
-    h += '<p class="kbd">キーボード: ' + (isChoice ? "1〜4で選ぶ・" : "Enterで答えを見る・o で○・x で×・") + "← → で前後の問題・Esc で一覧へ</p>";
+    h += '<p class="kbd">キーボード: ' + (isChoice ? "1〜4で選ぶ・" + (unkOn(u) ? "0でわからない・" : "") : "Enterで答えを見る・o で○・x で×・") + "← → で前後の問題・Esc で一覧へ</p>";
   }
   app.innerHTML = h;
   var b = '<button class="btn nav" data-act="prev" aria-label="前の問題"' + (view.pos === 0 ? " disabled" : "") + ">‹</button>";
-  if (isChoice) b += view.revealed ? '<button class="btn primary" data-act="next">次の問題へ ›</button>' : '<span class="hintbar">選択肢を選んでください</span>';
-  else if (!view.revealed) b += '<button class="btn primary" data-act="reveal">答えを見る</button>';
+  var canUnk = unkOn(u) && !p.pt;
+  if (isChoice) b += view.revealed ? '<button class="btn primary" data-act="next">次の問題へ ›</button>' : '<span class="hintbar">選択肢を選んでください</span>' + (canUnk ? '<button class="btn unk" data-act="unk">わからない</button>' : "");
+  else if (!view.revealed) b += (canUnk ? '<button class="btn unk" data-act="unk">わからない</button>' : "") + '<button class="btn primary" data-act="reveal">答えを見る</button>';
+  else if (view.mark === "unk") b += '<button class="btn primary" data-act="next">次の問題へ ›</button>';
   else if (p.pt) { var pv = store.pts[k]; b += '<label class="ptlab">得点<input id="ptin" class="ptin" type="number" inputmode="numeric" min="0" max="' + p.pt + '" value="' + (pv === undefined ? "" : pv) + '" placeholder="0">/ ' + p.pt + '点</label><button class="btn primary" data-act="score">次へ ›</button>'; }
   else b += '<button class="btn ng" data-act="grade" data-v="0">× 違った</button><button class="btn ok" data-act="grade" data-v="1">○ できた</button>';
   if (!(isChoice && view.revealed)) b += '<button class="btn nav" data-act="next" aria-label="次の問題">›</button>';
@@ -657,6 +669,19 @@ function doReveal() {
   view.elapsed = curElapsed(); view.running = false; view.revealed = true;
   store.time[rkey(view.unit, view.list[view.pos])] = Math.round(view.elapsed / 1000); save();
   render(); var a = document.querySelector(".answer"); if (a) a.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function doUnknown() {
+  if (view.revealed) return;
+  var u = view.unit, idx = view.list[view.pos];
+  if (!unkOn(u) || u.ps[idx].pt) return;
+  view.elapsed = curElapsed(); view.running = false; view.revealed = true; view.picked = -1; view.mark = "unk";
+  recordResult(rkey(u, idx), false); store.time[rkey(u, idx)] = Math.round(view.elapsed / 1000); save();
+  render(); var a = document.querySelector(".answer"); if (a) a.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function doGuess() {
+  if (!view.revealed || view.mark) return;
+  var u = view.unit, idx = view.list[view.pos];
+  view.mark = "guess"; recordResult(rkey(u, idx), false); save(); render();
 }
 function doGrade(v) { recordResult(rkey(view.unit, view.list[view.pos]), v === 1); save(); move(1); }
 function doScore() {
@@ -743,6 +768,8 @@ function handle(e) {
     render();
   }
   else if (act === "reveal") doReveal();
+  else if (act === "unk") doUnknown();
+  else if (act === "guess") doGuess();
   else if (act === "pick") doPick(+t.getAttribute("data-n"));
   else if (act === "grade") doGrade(+t.getAttribute("data-v"));
   else if (act === "prev") move(-1);
@@ -808,10 +835,11 @@ document.addEventListener("keydown", function (e) {
   else if (e.key === "ArrowLeft") move(-1);
   else if (e.key === "ArrowRight") move(1);
   else if (p.c && !view.revealed && /^[1-4]$/.test(e.key) && +e.key <= p.c.length) doPick(+e.key - 1);
+  else if (!view.revealed && e.key === "0" && unkOn(view.unit) && !p.pt) doUnknown();
   else if (p.c && view.revealed && e.key === "Enter") move(1);
   else if (!p.c && !view.revealed && e.key === "Enter") { e.preventDefault(); doReveal(); }
-  else if (!p.c && view.revealed && (e.key === "o" || e.key === "O")) doGrade(1);
-  else if (!p.c && view.revealed && (e.key === "x" || e.key === "X")) doGrade(0);
+  else if (!p.c && view.revealed && !view.mark && (e.key === "o" || e.key === "O")) doGrade(1);
+  else if (!p.c && view.revealed && !view.mark && (e.key === "x" || e.key === "X")) doGrade(0);
 });
 
 render();
