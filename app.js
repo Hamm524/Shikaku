@@ -6,7 +6,7 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル2", short: "HTML5", title: "HTML5ドリル", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -425,7 +425,19 @@ function renderHome() {
         h += "</details>";
       });
     } else {
-      S.units.forEach(function (u) { h += unitBtn(u); });
+      // 単元に group(例: レベル1・レベル2)が2種類以上あれば、グループごとに分けて見せる
+      var groups = [];
+      S.units.forEach(function (u) { if (groups.indexOf(u.group) < 0) groups.push(u.group); });
+      if (groups.length > 1) {
+        groups.forEach(function (g, gi) {
+          var us = S.units.filter(function (u) { return u.group === g; }), left = 0, tot = 0;
+          us.forEach(function (u) { var c = counts(u); left += c.rest; tot += c.n; });
+          h += '<details class="step' + (left ? "" : " done") + '" open><summary><span class="sn">' + (left ? gi + 1 : "✓") + '</span><span class="stext"><b>' + esc(g) + "</b><small>" + us.length + "単元・" + tot + "問</small></span>" +
+            '<span class="sleft">' + (left ? "残り " + left + "問" : "完了") + "</span></summary>";
+          us.forEach(function (u) { h += unitBtn(u); });
+          h += "</details>";
+        });
+      } else S.units.forEach(function (u) { h += unitBtn(u); });
     }
     h += "</section>";
   }
