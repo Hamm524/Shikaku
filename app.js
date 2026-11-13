@@ -503,8 +503,8 @@ function itemsFor(f) {
 function freeFormHTML() {
   var f = view.free, S = subjById(view.subj), h = "";
   h += '<div class="card pform"><div class="fld"><span>単元(複数えらべます)</span><div class="fpick">';
-  S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・×" + c.ng + ")</label>"; });
-  h += '</div><div class="row"><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
+  S.units.forEach(function (u) { var c = counts(u); h += '<label class="chk"><input type="checkbox" data-fp="unit" data-id="' + u.id + '"' + (f.units[u.id] ? " checked" : "") + ">" + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + esc(u.name) + "(" + c.n + "問・" + (c.ok + c.ng ? "正答率" + Math.round(100 * c.ok / (c.ok + c.ng)) + "%・" : "") + "×" + c.ng + ")</label>"; });
+  h += '</div><div class="row"><button class="btn" data-act="fweak">苦手な単元を選ぶ</button><button class="btn" data-act="fall">すべて選ぶ</button><button class="btn" data-act="fnone">すべて外す</button></div></div>';
   h += '<div class="fld"><span>問題の選び方</span><div class="offs">';
   [["all", "すべて"], ["new", "まだ解いていない問題"], ["ng", "間違えた(×)問題"], ["due", "復習の日が来た問題"]].forEach(function (x) { h += '<label class="chk"><input type="radio" name="fpick" data-fp="pick" value="' + x[0] + '"' + (f.pick === x[0] ? " checked" : "") + ">" + x[1] + "</label>"; });
   h += '</div></div><div class="fld"><span>問題の数</span><select data-fp="n">';
@@ -706,6 +706,12 @@ function handle(e) {
   }
   else if (act === "mode") { lset("shk_mode", t.getAttribute("data-v")); render(); }
   else if (act === "fall") { subjById(view.subj).units.forEach(function (u) { view.free.units[u.id] = true; }); render(); }
+  else if (act === "fweak") {
+    var wk = subjById(view.subj).units.map(function (u) { var c = counts(u); return { id: u.id, ng: c.ng, rate: c.ng / Math.max(1, c.ok + c.ng) }; }).filter(function (x) { return x.ng > 0; });
+    wk.sort(function (a, b) { return b.rate - a.rate || b.ng - a.ng; });
+    view.free.units = {}; wk.slice(0, 3).forEach(function (x) { view.free.units[x.id] = true; });
+    if (wk.length) view.free.pick = "ng"; render();
+  }
   else if (act === "fnone") { view.free.units = {}; render(); }
   else if (act === "fstart") {
     var its = itemsFor(view.free);
