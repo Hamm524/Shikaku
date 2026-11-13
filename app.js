@@ -4,8 +4,8 @@
 /* ---------- 科目とデータ ---------- */
 var ONLY = window.ONLY || "";
 var SUBJECTS = [
-  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
-  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
+  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
+  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
   { id: "html5", name: "HTML5プロフェッショナル レベル1・レベル2", short: "HTML5", title: "HTML5ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "レベル1とレベル2に分けています。レベル2の問題はまだサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
