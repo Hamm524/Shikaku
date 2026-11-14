@@ -302,3 +302,10 @@ details.step:not(.cur) { background: transparent; }
 .gloss dl { margin: 0 0 8px; }
 .gloss dt { font-weight: 700; }
 .gloss dd { margin: 2px 0 0; color: var(--ink-soft); }
+
+/* 模擬試験(本番の形式) */
+.choice.sel { background: var(--accent-tint); border-color: var(--accent); }
+.choice.sel .cn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.exdots { gap: 5px; }
+.dot.ans { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.topbar .tm { font-size: 1.1rem; }

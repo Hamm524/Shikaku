@@ -5,7 +5,7 @@
 var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
-  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
+  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。", exam: { mins: 120, pass: { total: 0.6, part: 0.3 }, parts: [{ name: "ストラテジ系", ids: ["ip1"], n: 34 }, { name: "マネジメント系", ids: ["ip2"], n: 20 }, { name: "テクノロジ系", ids: ["ip3", "ip4"], n: 46 }] } },
   { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
   { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
@@ -233,6 +233,8 @@ function render() {
   else if (view.name === "data") renderData();
   else if (view.name === "intro") renderIntro();
   else if (view.name === "free") renderFree();
+  else if (view.name === "exam" && view.ex) renderExam();
+  else if (view.name === "examres" && view.ex) renderExamRes();
   else renderDone();
 }
 setInterval(function () {
@@ -445,13 +447,15 @@ function renderHome() {
   }
   h += "</section>";
   // 練習 / 模擬試験 の切り替え
-  var mocks = S.units.filter(function (u) { return u.mock; }).concat(S.mockUnits || []), hasMock = mocks.length > 0;
+  var mocks = S.units.filter(function (u) { return u.mock; }).concat(S.mockUnits || []), hasMock = mocks.length > 0 || !!S.exam;
   var mm = lget("shk_mode"), mode = mm === "mock" && hasMock ? "mock" : mm === "free" ? "free" : "units";
   h += '<div class="seg' + (hasMock ? " seg3" : " seg2") + '" role="tablist" aria-label="練習のしかた">' +
     '<button role="tab" aria-selected="' + (mode === "units") + '" class="' + (mode === "units" ? "on" : "") + '" data-act="mode" data-v="units">単元から学ぶ</button>' +
     '<button role="tab" aria-selected="' + (mode === "free") + '" class="' + (mode === "free" ? "on" : "") + '" data-act="mode" data-v="free">自分で選んで解く</button>' +
     (hasMock ? '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button>' : "") + "</div>";
-  if (mode === "mock") {
+  if (mode === "mock" && S.exam) {
+    h += examHomeHTML(S);
+  } else if (mode === "mock") {
     h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">' + (S.mockUnits ? "本番と同じ約60問・試験時間80分" : "90分の目安・5大問・100点(70点で合格)") + '</span></div><p class="sub">' + (S.mockUnits ? "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。" : "仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。") + '</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
@@ -736,6 +740,119 @@ function mockScore(u) {
   return { got: got, max: max, done: done, n: u.ps.length };
 }
 
+/* ---------- 模擬試験(本番と同じ形式。答えは採点するまで見せない) ---------- */
+function seeded(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function examPool(part) { var out = []; part.ids.forEach(function (id) { var u = unitById(id); if (u) u.ps.forEach(function (p, i) { out.push({ u: u, i: i }); }); }); return out; }
+function examOrder(S, pi) {
+  var pool = examPool(S.exam.parts[pi]), rnd = seeded(7919 * (pi + 1) + pool.length), a = pool.slice();
+  for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+// 問題が足りないと、回どうしで同じ問題が重なる。重ならない回数を数える
+function examSets(S) { var m = 99; S.exam.parts.forEach(function (pt) { m = Math.min(m, Math.floor(examPool(pt).length / pt.n)); }); return Math.max(1, m); }
+function examItems(S, k) {
+  var out = [];
+  S.exam.parts.forEach(function (pt, pi) { var o = examOrder(S, pi); for (var j = 0; j < pt.n; j++) { var x = o[(k * pt.n + j) % o.length]; out.push({ u: x.u, i: x.i, part: pi }); } });
+  return out;
+}
+function exKey(sid, k) { return "shk_ex_" + sid + "_" + k; }
+function exLast(sid, k) { try { return JSON.parse(lget(exKey(sid, k)) || "null"); } catch (e) { return null; } }
+function examHomeHTML(S) {
+  var ex = S.exam, n = 0, h = "";
+  ex.parts.forEach(function (pt) { n += pt.n; });
+  var sets = examSets(S);
+  h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">' + n + "問・" + ex.mins + "分</span></div>" +
+    '<p class="sub">本番と同じ形式です。分野の順に、' + ex.parts.map(function (pt) { return pt.name + pt.n + "問"; }).join("、") + "。答えは採点するまで見えません。時間が来ると、自動で採点します。</p><div class=\"mgrid\">";
+  for (var k = 0; k < sets; k++) {
+    var r = exLast(S.id, k);
+    h += '<button class="mock" data-act="ex-start" data-k="' + k + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">' + ex.mins + '分</span><span class="ms">' + (r ? r.tot + " / " + r.n + "問" : "未挑戦") + "</span></button>";
+  }
+  h += "</div>" + (sets < 2 ? '<p class="sub">いまの問題数では、問題が重ならない模擬試験は1回分です。問題が増えると、回数も増えます。</p>' : "") + "</section>";
+  return h;
+}
+function startExam(k) {
+  var S = subjById(view.subj), items = examItems(S, k);
+  view.ex = { k: k, items: items, ans: items.map(function () { return -1; }), pos: 0, start: Date.now(), end: Date.now() + S.exam.mins * 60000, done: false, confirm: false, quit: false };
+  go("exam", {});
+}
+function exRemain() { return Math.max(0, view.ex.end - Date.now()); }
+function renderExam() {
+  var ex = view.ex, S = subjById(view.subj), n = ex.items.length, it = ex.items[ex.pos], p = it.u.ps[it.i], pt = S.exam.parts[it.part];
+  var answered = ex.ans.filter(function (a) { return a >= 0; }).length;
+  var h = '<div class="topbar"><button class="link" data-act="ex-quit">' + (ex.quit ? "もう一度押すと中断(記録されません)" : "← 中断する") + '</button><span class="tm" id="extm" role="timer">残り ' + fmt(exRemain()) + "</span></div>";
+  h += '<div class="progress"><i style="width:' + Math.round(answered / n * 100) + '%"></i></div>';
+  h += '<article class="card"><span class="tag">問' + (ex.pos + 1) + " / " + n + "　" + esc(pt.name) + '</span><p class="qtext">' + esc(p.q) + '</p><div class="choices" role="group" aria-label="選択肢">';
+  p.c.forEach(function (c, i) { h += '<button class="choice' + (ex.ans[ex.pos] === i ? " sel" : "") + '" data-act="ex-pick" data-n="' + i + '"><span class="cn">' + (i + 1) + "</span><span>" + esc(c) + "</span></button>"; });
+  h += "</div></article>";
+  h += '<div class="dots exdots">';
+  ex.items.forEach(function (x, i) { h += '<button class="dot' + (i === ex.pos ? " cur" : ex.ans[i] >= 0 ? " ans" : "") + '" data-act="ex-jump" data-n="' + i + '" aria-label="問' + (i + 1) + '">' + (i + 1) + "</button>"; });
+  h += '</div><p class="sub">色が付いた番号は、答えを選んだ問題です。番号を押すと、その問題に移れます。' + (answered < n ? "未回答は" + (n - answered) + "問です。" : "全問に答えました。") + "</p>";
+  app.innerHTML = h;
+  var b = '<button class="btn nav" data-act="ex-prev" aria-label="前の問題"' + (ex.pos === 0 ? " disabled" : "") + ">‹</button>";
+  b += '<button class="btn" data-act="ex-next"' + (ex.pos >= n - 1 ? " disabled" : "") + ">次の問題 ›</button>";
+  b += '<button class="btn primary" data-act="ex-end">' + (ex.confirm ? "未回答" + (n - answered) + "問。もう一度押すと採点" : "終了して採点") + "</button>";
+  barin.innerHTML = b; bar.hidden = false;
+}
+function examMove(d) { var ex = view.ex; ex.pos = Math.max(0, Math.min(ex.items.length - 1, ex.pos + d)); ex.confirm = false; ex.quit = false; render(); window.scrollTo(0, 0); }
+function examPick(i) { var ex = view.ex; ex.ans[ex.pos] = i; ex.confirm = false; ex.quit = false; render(); }
+function examEnd(force) {
+  var ex = view.ex, n = ex.items.length, answered = ex.ans.filter(function (a) { return a >= 0; }).length;
+  if (!force && answered < n && !ex.confirm) { ex.confirm = true; render(); return; }
+  var S = subjById(view.subj), parts = S.exam.parts.map(function () { return { r: 0, n: 0 }; }), tot = 0;
+  ex.items.forEach(function (x, i) {
+    var ok = ex.ans[i] === x.u.ps[x.i].k;
+    parts[x.part].n++; if (ok) { parts[x.part].r++; tot++; }
+    if (ex.ans[i] >= 0) recordResult(rkey(x.u, x.i), ok);
+  });
+  save();
+  ex.done = true; ex.res = { tot: tot, parts: parts, sec: Math.round((Math.min(Date.now(), ex.end) - ex.start) / 1000) };
+  lset(exKey(S.id, ex.k), JSON.stringify({ d: fd(today0()), tot: tot, n: n, parts: parts, sec: ex.res.sec }));
+  go("examres", {});
+}
+function renderExamRes() {
+  var ex = view.ex, S = subjById(view.subj), r = ex.res, n = ex.items.length, pc = Math.round(r.tot / n * 100);
+  var okAll = r.tot / n >= S.exam.pass.total && r.parts.every(function (x) { return x.r / x.n >= S.exam.pass.part; });
+  var h = '<div class="topbar"><button class="link" data-act="home">← 一覧へ</button></div>';
+  h += '<div class="card result"><span class="tag">模擬試験 第' + (ex.k + 1) + '回</span><div class="big">' + r.tot + " / " + n + "問 正解(" + pc + '%)</div><p class="' + (okAll ? "okmsg" : "ngmsg") + '">' +
+    (okAll ? "合格の目安を超えています。" : "合格の目安には届きませんでした。") + '</p><div class="steps">';
+  r.parts.forEach(function (x, i) { var pp = Math.round(x.r / x.n * 100); h += '<div class="sub">' + esc(S.exam.parts[i].name) + "　" + x.r + " / " + x.n + "問(" + pp + "%)" + (x.r / x.n < S.exam.pass.part ? "　← 目安の" + Math.round(S.exam.pass.part * 100) + "%未満" : "") + "</div>"; });
+  h += '</div><p class="sub">かかった時間 ' + fmt(r.sec * 1000) + " / " + S.exam.mins + ":00</p>";
+  h += '<p class="sub">目安の基準は、総合' + Math.round(S.exam.pass.total * 100) + "%以上、かつ各分野" + Math.round(S.exam.pass.part * 100) + "%以上の正答率です。本番は、問題ごとに配点が違う方式(IRT)で、1,000点満点のうち、総合600点以上、各分野300点以上が合格です。この判定は、正答率から出した目安です。</p>";
+  var wrong = [];
+  ex.items.forEach(function (x, i) { if (ex.ans[i] !== x.u.ps[x.i].k) wrong.push(i); });
+  h += '<div class="row">' + (wrong.length ? '<button class="btn primary" data-act="ex-retry">間違えた問題を解き直す(' + wrong.length + "問)</button>" : "") + '<button class="btn" data-act="home">一覧へ</button></div></div>';
+  if (wrong.length) {
+    h += '<section class="usec"><div class="sechead"><h2>間違えた問題・未回答の問題</h2><span class="sub">' + wrong.length + "問</span></div>";
+    wrong.forEach(function (i) {
+      var x = ex.items[i], p = x.u.ps[x.i], a = ex.ans[i];
+      h += '<details class="step"><summary><span class="sn">' + (i + 1) + '</span><span class="stext"><b>' + esc(p.t) + "</b><small>" + esc(S.exam.parts[x.part].name) + '</small></span></summary><div class="card"><p class="qtext">' + esc(p.q) + "</p><p class=\"sub\">あなたの答え: " + (a >= 0 ? (a + 1) + "番 " + esc(p.c[a]) : "未回答") + '</p><p class="verdict good">正解: ' + (p.k + 1) + "番 " + esc(p.c[p.k]) + '</p><div class="expl"><b>解説</b>' + esc(p.e) + "</div></div></details>";
+    });
+    h += "</section>";
+  }
+  app.innerHTML = h; bar.hidden = true; window.scrollTo(0, 0);
+}
+setInterval(function () {
+  if (view.name !== "exam" || !view.ex || view.ex.done) return;
+  var left = exRemain(), el = document.getElementById("extm");
+  if (el) { el.textContent = "残り " + fmt(left); el.className = "tm" + (left < 600000 ? " over" : ""); }
+  if (left <= 0) examEnd(true);
+}, 1000);
+function examAct(act, t) {
+  var ex = view.ex;
+  if (act === "ex-start") startExam(+t.getAttribute("data-k"));
+  else if (act === "ex-pick") examPick(+t.getAttribute("data-n"));
+  else if (act === "ex-prev") examMove(-1);
+  else if (act === "ex-next") examMove(1);
+  else if (act === "ex-jump") { ex.pos = +t.getAttribute("data-n"); ex.confirm = false; ex.quit = false; render(); window.scrollTo(0, 0); }
+  else if (act === "ex-end") examEnd(false);
+  else if (act === "ex-quit") { if (ex.quit) { view.ex = null; go("home", {}); } else { ex.quit = true; render(); } }
+  else if (act === "ex-retry") {
+    var items = [];
+    ex.items.forEach(function (x, i) { if (ex.ans[i] !== x.u.ps[x.i].k) items.push({ u: x.u, i: x.i }); });
+    if (items.length) startMix(items, "模擬試験の解き直し", false, view.subj);
+  }
+}
+
 /* ---------- データの保存・バックアップ ---------- */
 function backupSummary(o) {
   var ok = 0, ng = 0, k;
@@ -790,7 +907,8 @@ function handle(e) {
   var t = e.target.closest("[data-act]");
   if (!t) return;
   var act = t.getAttribute("data-act");
-  if (act === "open") startUnit(unitById(t.getAttribute("data-id")), false);
+  if (act.indexOf("ex-") === 0) examAct(act, t);
+  else if (act === "open") startUnit(unitById(t.getAttribute("data-id")), false);
   else if (act === "due") startUnit(unitById(t.getAttribute("data-id")), "due");
   else if (act === "score") doScore();
   else if (act === "start") startQuestion();
@@ -865,6 +983,12 @@ document.addEventListener("keydown", function (e) {
   if (e.metaKey || e.altKey) return;
   var tag = (e.target && e.target.tagName) || "";
   var typing = tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT";
+  if (view.name === "exam" && view.ex && !typing && !e.ctrlKey) {
+    if (/^[1-4]$/.test(e.key)) examPick(+e.key - 1);
+    else if (e.key === "ArrowLeft") examMove(-1);
+    else if (e.key === "ArrowRight" || e.key === "Enter") examMove(1);
+    return;
+  }
   if (view.name !== "quiz") return;
   var p = view.unit.ps[view.list[view.pos]];
   if (typing) { if (e.key === "Enter" && e.target.id === "ptin") { e.preventDefault(); doScore(); return; } if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !view.revealed && !p.c) { e.preventDefault(); doReveal(); } return; }
