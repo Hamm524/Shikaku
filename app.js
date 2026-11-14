@@ -4,7 +4,7 @@
 /* ---------- 科目とデータ ---------- */
 var ONLY = window.ONLY || "";
 var SUBJECTS = [
-  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
+  { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, gloss: typeof BOKI_GLOSS !== "undefined" ? BOKI_GLOSS : null, glossLong: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。", exam: { mins: 120, pass: { total: 0.6, part: 0.3 }, parts: [{ name: "ストラテジ系", ids: ["ip1"], n: 34 }, { name: "マネジメント系", ids: ["ip2"], n: 20 }, { name: "テクノロジ系", ids: ["ip3", "ip4"], n: 46 }] } },
   { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, mockInfo: "本番と同じ約60問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。", units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
   { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, mocks: typeof HTML5_L2_MOCKS !== "undefined" ? HTML5_L2_MOCKS : null, mockInfo: "本番と同じ40〜45問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、45問ずつ選びました(「Selectors・History・デバッグ」は問題が少ないため、3回で一部の問題が重なります)。時間を計って、通しで解いてみましょう。", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
@@ -33,12 +33,13 @@ function orderOf(sid) {
   return us.filter(function (u) { return !u.mock; }).concat(us.filter(function (u) { return u.mock; })).map(function (u) { return u.id; });
 }
 var STEPS = [
-  { s: [11, 6], e: [11, 12], name: "3級範囲と仕訳", ids: ["t1", "t2", "t3"] },
+  { s: [11, 6], e: [11, 12], name: "3級範囲と仕訳", ids: ["t1", "t2", "t3", "w1"] },
   { s: [11, 13], e: [11, 19], name: "工業簿記(前半)", ids: ["k1", "k2"] },
-  { s: [11, 20], e: [11, 26], name: "商業の基礎と連結会計の入口、工業簿記(後半)", ids: ["s1", "s4", "k3"] },
-  { s: [11, 27], e: [12, 3], name: "商業の2級論点と、連結・工業の大問", ids: ["s2", "d5", "d2", "d3"] },
-  { s: [12, 4], e: [12, 10], name: "財務諸表と本試験形式の大問", ids: ["s3", "d1", "d4", "g"] }
+  { s: [11, 20], e: [11, 26], name: "商業の基礎と連結会計の入口、工業簿記(後半)", ids: ["s1", "s4", "k3", "w2"] },
+  { s: [11, 27], e: [12, 3], name: "商業の2級論点と、連結・工業の大問", ids: ["s2", "d5", "w4", "d2", "d3"] },
+  { s: [12, 4], e: [12, 10], name: "財務諸表と本試験形式の大問", ids: ["s3", "w3", "d1", "d4", "g"] }
 ];
+STEPS.forEach(function (St) { St.ids = St.ids.filter(function (id) { return unitById(id); }); });
 
 /* ---------- 保存(端末) ---------- */
 var KEY = "shikaku-v1";
@@ -169,6 +170,7 @@ function usOn(u) { return !!(u && u.ut && view.us && view.us.id === u.id); }
 function glossHTML(u, p) {
   var S = u && subjById(u.subj), g = S && S.gloss;
   if (!g) return "";
+  if (S.glossLong) return glossBox(glossLong(g, [p.q].concat(p.c || [], p.a || []).join(" "), 5));
   var text = [p.q].concat(p.c || [], [p.code || ""]).join(" "), plain = text.replace(/HTTPS/g, ""), out = [];
   g.forEach(function (e) {
     if (out.length >= 4) return;
@@ -177,6 +179,37 @@ function glossHTML(u, p) {
   });
   if (!out.length) return "";
   return '<div class="gloss"><b>用語の説明</b>' + out.map(function (e) { return "<dl><dt>" + esc(e.t) + "</dt><dd>" + esc(e.d) + "</dd></dl>"; }).join("") + "</div>";
+}
+/* 簿記の用語(glossLong: true の科目)。解答の仕訳に出てくる勘定科目も対象にする。長いキーワードから先に当てはめて、
+   当てはまった部分は消していくので、「売上原価」の問題に「売上」の説明は出ない。表示する順番は、用語の一覧の順 */
+function glossLong(g, text, max) {
+  var ks = [];
+  g.forEach(function (e, i) { e.k.forEach(function (k) { ks.push([k, i]); }); });
+  ks.sort(function (a, b) { return b[0].length - a[0].length; });
+  var hit = {};
+  ks.forEach(function (x) { if (text.indexOf(x[0]) >= 0) { hit[x[1]] = 1; text = text.split(x[0]).join("\u0000"); } });
+  return g.filter(function (e, i) { return hit[i]; }).slice(0, max);
+}
+function glossBox(out) {
+  if (!out.length) return "";
+  return '<div class="gloss"><b>用語の説明</b>' + out.map(function (e) { return "<dl><dt>" + esc(e.t) + "</dt><dd>" + esc(e.d) + "</dd></dl>"; }).join("") + "</div>";
+}
+/* 用語集(用語の一覧。上の入力欄で絞り込める) */
+function renderGlist() {
+  var S = subjById(view.subj), g = S.gloss || [];
+  var h = '<div class="topbar"><button class="link" data-act="home">← ホーム</button></div><div><h1>用語集</h1><p class="sub">' + g.length + '語あります。問題を解いたあとにも、その問題に出てきた用語の説明が出ます。</p></div>' +
+    '<input id="gq" class="gq" type="search" placeholder="用語を探す(例: 仕掛品、のれん)" aria-label="用語を探す" autocomplete="off">' +
+    '<p class="sub" id="gn"></p><div class="gloss glist">' + g.map(function (e) { return "<dl><dt>" + esc(e.t) + "</dt><dd>" + esc(e.d) + "</dd></dl>"; }).join("") + "</div>";
+  app.innerHTML = h; bar.hidden = true;
+  var q = document.getElementById("gq"), gn = document.getElementById("gn"), dls = app.querySelectorAll(".glist dl");
+  q.addEventListener("input", function () {
+    var v = q.value.trim().toLowerCase(), n = 0;
+    for (var i = 0; i < dls.length; i++) {
+      var e = g[i], ok = !v || (e.t + " " + e.k.join(" ") + " " + e.d).toLowerCase().indexOf(v) >= 0;
+      dls[i].hidden = !ok; if (ok) n++;
+    }
+    gn.textContent = v ? (n ? n + "語が見つかりました" : "見つかりませんでした。別の言葉で探してみてください。") : "";
+  });
 }
 function unkOn(u) { var S = u && subjById(u.subj); return !!(S && S.unk) && !(u.mock); }
 /* 合格の目安(goal: 正答率の%)。解いた問題のうち、○の割合を出す */
@@ -233,6 +266,7 @@ function render() {
   else if (view.name === "data") renderData();
   else if (view.name === "intro") renderIntro();
   else if (view.name === "free") renderFree();
+  else if (view.name === "glist") renderGlist();
   else if (view.name === "exam" && view.ex) renderExam();
   else if (view.name === "examres" && view.ex) renderExamRes();
   else renderDone();
@@ -497,7 +531,7 @@ function renderHome() {
     h += "</section>";
   }
   // 下の小さなリンク
-  h += '<footer class="hfoot"><button class="link" data-act="data">データの保存・合言葉・設定</button>';
+  h += '<footer class="hfoot">' + (S.gloss && S.glossLong ? '<button class="link" data-act="glist">用語集(' + S.gloss.length + '語)</button>' : "") + '<button class="link" data-act="data">データの保存・合言葉・設定</button>';
   h += "</footer>";
   app.innerHTML = h; bar.hidden = true;
 }
@@ -935,6 +969,7 @@ function handle(e) {
   else if (act === "begin") go("quiz", { revealed: false });
   else if (act === "gist") go("intro", {});
   else if (act === "free") go("free", {});
+  else if (act === "glist") go("glist", {});
   else if (act === "due-all") {
     var di = []; dueSummary(view.subj).list.forEach(function (x) { dueIndices(x.u).forEach(function (i) { di.push({ u: x.u, i: i }); }); });
     if (di.length) startMix(di, "今日の復習", true, view.subj);
