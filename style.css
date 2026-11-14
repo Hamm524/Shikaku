@@ -309,3 +309,5 @@ details.step:not(.cur) { background: transparent; }
 .exdots { gap: 5px; }
 .dot.ans { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
 .topbar .tm { font-size: 1.1rem; }
+.codelab { margin: 13px 0 5px; font-size: 13px; }
+.codeq { margin-top: 8px; }
