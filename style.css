@@ -302,3 +302,6 @@ details.step:not(.cur) { background: transparent; }
 .gloss dl { margin: 0 0 8px; }
 .gloss dt { font-weight: 700; }
 .gloss dd { margin: 2px 0 0; color: var(--ink-soft); }
+
+.codelab { margin: 13px 0 5px; font-size: 13px; }
+.codeq { margin-top: 8px; }
