@@ -332,6 +332,12 @@ function onChange(e) {
 }
 
 /* ---------- ホーム ---------- */
+var PAGES = [["boki", "簿記", "boki/"], ["itpass", "ITパス", "itpass/"], ["html5", "HTML5 Lv1", "html5/"], ["html5lv2", "HTML5 Lv2", "html5-lv2/"]];
+function pageLinks(cur) {
+  var h = '<nav class="pagelinks" aria-label="ほかの科目のページ"><span>ほかの科目</span>';
+  PAGES.forEach(function (g) { if (g[0] !== cur) h += '<a href="' + ROOT + g[2] + '">' + esc(g[1]) + "</a>"; });
+  return h + "</nav>";
+}
 function subjTabs(cur, cls) {
   var h = '<div class="subjtabs" role="tablist">';
   SUBJECTS.forEach(function (s) {
@@ -381,6 +387,7 @@ function renderHome() {
       '<div class="row"><button class="btn" data-act="code-copy">合言葉をコピー</button><button class="btn primary" data-act="noted">メモした</button></div><button class="link" data-act="data">すでに合言葉がある(別の端末や、ほかの科目で使っている)</button><span class="sub" id="cmsg"></span></div>';
   }
   if (SUBJECTS.length > 1) h += subjTabs(sid, "tab");
+  if (ONLY) h += pageLinks(ONLY);
   if (S.note) h += '<p class="sub">' + esc(S.note) + "</p>";
   // 受験日(1行の小さな表示。押すと学習計画へ)
   h += '<button class="examline" data-act="plan">' + (p && p.exam
