@@ -5,13 +5,8 @@
 var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
-<<<<<<< HEAD
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。", exam: { mins: 120, pass: { total: 0.6, part: 0.3 }, parts: [{ name: "ストラテジ系", ids: ["ip1"], n: 34 }, { name: "マネジメント系", ids: ["ip2"], n: 20 }, { name: "テクノロジ系", ids: ["ip3", "ip4"], n: 46 }] } },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
-=======
-  { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
   { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
->>>>>>> feature/html5-lv1-mock
   { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
@@ -452,25 +447,16 @@ function renderHome() {
   }
   h += "</section>";
   // 練習 / 模擬試験 の切り替え
-<<<<<<< HEAD
-  var mocks = S.units.filter(function (u) { return u.mock; }), hasMock = mocks.length > 0 || !!S.exam;
-=======
-  var mocks = S.units.filter(function (u) { return u.mock; }).concat(S.mockUnits || []), hasMock = mocks.length > 0;
->>>>>>> feature/html5-lv1-mock
+  var mocks = S.units.filter(function (u) { return u.mock; }).concat(S.mockUnits || []), hasMock = mocks.length > 0 || !!S.exam;
   var mm = lget("shk_mode"), mode = mm === "mock" && hasMock ? "mock" : mm === "free" ? "free" : "units";
   h += '<div class="seg' + (hasMock ? " seg3" : " seg2") + '" role="tablist" aria-label="練習のしかた">' +
     '<button role="tab" aria-selected="' + (mode === "units") + '" class="' + (mode === "units" ? "on" : "") + '" data-act="mode" data-v="units">単元から学ぶ</button>' +
     '<button role="tab" aria-selected="' + (mode === "free") + '" class="' + (mode === "free" ? "on" : "") + '" data-act="mode" data-v="free">自分で選んで解く</button>' +
     (hasMock ? '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button>' : "") + "</div>";
-<<<<<<< HEAD
   if (mode === "mock" && S.exam) {
     h += examHomeHTML(S);
   } else if (mode === "mock") {
-    h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">90分の目安・5大問・100点(70点で合格)</span></div><p class="sub">仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。</p><div class="mgrid">';
-=======
-  if (mode === "mock") {
     h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">' + (S.mockUnits ? "本番と同じ約60問・試験時間80分" : "90分の目安・5大問・100点(70点で合格)") + '</span></div><p class="sub">' + (S.mockUnits ? "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。" : "仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。") + '</p><div class="mgrid">';
->>>>>>> feature/html5-lv1-mock
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
       h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">' + (u.ut ? Math.round(unitMins(u)) : 90) + '分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
