@@ -296,3 +296,9 @@ details.step:not(.cur) { background: transparent; }
 .pagelinks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
 .pagelinks span { color: var(--ink-soft); }
 .pagelinks a { padding: 6px 12px; border: 1px solid var(--line, #d0d0d0); border-radius: 999px; color: inherit; text-decoration: none; }
+
+.gloss { margin-top: 13px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; }
+.gloss > b { display: block; margin-bottom: 8px; }
+.gloss dl { margin: 0 0 8px; }
+.gloss dt { font-weight: 700; }
+.gloss dd { margin: 2px 0 0; color: var(--ink-soft); }

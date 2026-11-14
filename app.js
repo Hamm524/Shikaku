@@ -6,7 +6,7 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
+  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
   { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
@@ -156,6 +156,19 @@ function usElapsed() { var a = view.us; return a ? a.ms + (a.running ? Date.now(
 function usFreeze() { var a = view.us; if (a && a.running) { a.ms = usElapsed(); a.running = false; } }
 function usOn(u) { return !!(u && u.ut && view.us && view.us.id === u.id); }
 /* 「わからない」ボタン(unk: true の科目だけ)。当てずっぽうで解いた問題を、×と同じ復習の流れに入れる */
+/* 用語の説明(gloss を持つ科目だけ)。問題文・選択肢・コードに、キーワードが出てくる用語を、最大4つ表示する */
+function glossHTML(u, p) {
+  var S = u && subjById(u.subj), g = S && S.gloss;
+  if (!g) return "";
+  var text = [p.q].concat(p.c || [], [p.code || ""]).join(" "), plain = text.replace(/HTTPS/g, ""), out = [];
+  g.forEach(function (e) {
+    if (out.length >= 4) return;
+    var hit = e.k.some(function (k) { return (k === "HTTP" ? plain : text).indexOf(k) >= 0; });
+    if (hit) out.push(e);
+  });
+  if (!out.length) return "";
+  return '<div class="gloss"><b>用語の説明</b>' + out.map(function (e) { return "<dl><dt>" + esc(e.t) + "</dt><dd>" + esc(e.d) + "</dd></dl>"; }).join("") + "</div>";
+}
 function unkOn(u) { var S = u && subjById(u.subj); return !!(S && S.unk) && !(u.mock); }
 /* 合格の目安(goal: 正答率の%)。解いた問題のうち、○の割合を出す */
 function goalOf(u) { var S = u && subjById(u.subj); return S && S.goal ? S.goal : 0; }
@@ -635,6 +648,7 @@ function renderQuiz() {
     h += '<div class="answer">';
     if (!isChoice) h += "<h3>" + (isCode ? "模範解答" : "解答") + "</h3>" + (isCode ? '<pre class="codeans">' + esc(p.code) + "</pre>" : p.a.map(journalHTML).join(""));
     h += '<div class="expl"><b>解説</b>' + esc(p.e) + "</div>";
+    h += glossHTML(u, p);
     if (p.w) h += '<div class="trap' + (store.res[k] === 0 ? " miss" : "") + '"><b>' + (store.res[k] === 0 ? "ここで間違えやすい" : "ひっかけポイント・覚え方") + "</b>" + esc(p.w) + "</div>";
     h += "</div>";
   }
