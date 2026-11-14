@@ -6,8 +6,8 @@ var ONLY = window.ONLY || "";
 var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
-  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
-  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, mockInfo: "本番と同じ約60問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。", units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
+  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, mocks: typeof HTML5_L2_MOCKS !== "undefined" ? HTML5_L2_MOCKS : null, mockInfo: "本番と同じ40〜45問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、45問ずつ選びました(「Selectors・History・デバッグ」は問題が少ないため、3回で一部の問題が重なります)。時間を計って、通しで解いてみましょう。", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -16,7 +16,7 @@ SUBJECTS.forEach(function (s) { s.units.forEach(function (u) { u.subj = s.id; u.
 SUBJECTS.forEach(function (s) {
   if (!s.mocks) return;
   s.mockUnits = s.mocks.map(function (m) {
-    var ps = m.refs.map(function (r) { return s.units.filter(function (x) { return x.id === r[0]; })[0].ps[r[1]]; });
+    var ps = m.refs.map(function (r) { var su = s.units.filter(function (x) { return x.id === r[0]; })[0]; return typeof r[1] === "string" ? su.ps.filter(function (p) { return p.t === r[1]; })[0] : su.ps[r[1]]; });
     var u = { id: m.id, name: m.name, group: "模擬試験", mock: true, ut: true, subj: s.id, dm: m.dm, ps: ps };
     UNITS.push(u); return u;
   });
@@ -452,7 +452,7 @@ function renderHome() {
     '<button role="tab" aria-selected="' + (mode === "free") + '" class="' + (mode === "free" ? "on" : "") + '" data-act="mode" data-v="free">自分で選んで解く</button>' +
     (hasMock ? '<button role="tab" aria-selected="' + (mode === "mock") + '" class="' + (mode === "mock" ? "on" : "") + '" data-act="mode" data-v="mock">模擬試験</button>' : "") + "</div>";
   if (mode === "mock") {
-    h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">' + (S.mockUnits ? "本番と同じ約60問・試験時間80分" : "90分の目安・5大問・100点(70点で合格)") + '</span></div><p class="sub">' + (S.mockUnits ? "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。" : "仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。") + '</p><div class="mgrid">';
+    h += '<section class="msec"><div class="sechead"><h2>模擬試験</h2><span class="sub">' + (S.mockUnits ? S.mockInfo : "90分の目安・5大問・100点(70点で合格)") + '</span></div><p class="sub">' + (S.mockUnits ? S.mockDesc : "仕上げの時期に使います。通しで解いて、点が低かった大問を見直してください。") + '</p><div class="mgrid">';
     mocks.forEach(function (u, k) {
       var c = counts(u), d = has && p.dates[u.id] && c.rest > 0 ? jd(p.dates[u.id]) : "";
       h += '<button class="mock" data-act="open" data-id="' + u.id + '"><span class="mn">第' + (k + 1) + '回</span><span class="mm">' + (u.ut ? Math.round(unitMins(u)) : 90) + '分</span><span class="ms">' + (c.rest === c.n ? "未挑戦" : c.rest === 0 ? (u.ps[0].pt ? mockScore(u).got + " / " + mockScore(u).max + "点" : "○ " + c.ok + " / " + c.n) : "途中 " + (c.n - c.rest) + " / " + c.n) + "</span>" + (d ? '<span class="mm">予定 ' + d + "</span>" : "") + "</button>";
