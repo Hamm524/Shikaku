@@ -7,7 +7,7 @@ var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。" },
   { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
-  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "いまの問題はサンプルです。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -632,7 +632,7 @@ function renderQuiz() {
   var timer = utimer ? utimer : view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
-  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + (u.mock && u.ut ? "" : " " + esc(p.t)) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>";
+  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + (u.mock && u.ut ? "" : " " + esc(p.t)) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>" + (p.cq ? '<pre class="codeans codeq">' + esc(p.cq) + "</pre>" : "");
   if (isChoice) {
     h += '<div class="choices" role="group" aria-label="選択肢">';
     p.c.forEach(function (c, n) {
