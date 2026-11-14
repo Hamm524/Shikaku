@@ -311,3 +311,8 @@ details.step:not(.cur) { background: transparent; }
 .topbar .tm { font-size: 1.1rem; }
 .codelab { margin: 13px 0 5px; font-size: 13px; }
 .codeq { margin-top: 8px; }
+
+/* 用語集 */
+.gq { width: 100%; box-sizing: border-box; padding: 13px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 16px; background: var(--surface); color: inherit; }
+.glist { margin-top: 8px; }
+.glist dl[hidden] { display: none; }
