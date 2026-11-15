@@ -480,6 +480,10 @@ function renderHome() {
     h += "</div>";
   }
   h += "</section>";
+  S.units.filter(function (u) { return u.multi; }).forEach(function (u) {
+    var c = counts(u);
+    h += '<button class="freecta" data-act="open" data-id="' + u.id + '"><span><b>複数選択の問題</b><small>「2つ選びなさい」の形式の練習。' + c.n + "問・" + (c.rest === c.n ? "未挑戦" : "残り " + c.rest + "問") + "</small></span><i>›</i></button>";
+  });
   // 練習 / 模擬試験 の切り替え
   var mocks = S.units.filter(function (u) { return u.mock; }).concat(S.mockUnits || []), hasMock = mocks.length > 0 || !!S.exam;
   var mm = lget("shk_mode"), mode = mm === "mock" && hasMock ? "mock" : mm === "free" ? "free" : "units";
@@ -670,7 +674,7 @@ function renderQuiz() {
   var timer = utimer ? utimer : view.revealed
     ? '<p class="took' + (view.elapsed > target * 60000 ? " over" : "") + '">所要時間 <b>' + fmt(view.elapsed) + "</b>(目安 " + fmtMin(target) + ")</p>"
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
-  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + (u.mock && u.ut ? "" : " " + esc(p.t)) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>" + (p.hq ? '<p class="sub codelab">HTML</p><pre class="codeans codeq">' + esc(p.hq) + "</pre>" : "") + (p.cq ? (p.hq ? '<p class="sub codelab">JavaScript</p>' : "") + '<pre class="codeans codeq">' + esc(p.cq) + "</pre>" : "");
+  h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + (u.mock && u.ut ? "" : " " + esc(p.t)) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + (isMulti(p) ? '<em class="lv lv-vx">複数選択</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>" + (p.hq ? '<p class="sub codelab">HTML</p><pre class="codeans codeq">' + esc(p.hq) + "</pre>" : "") + (p.cq ? (p.hq ? '<p class="sub codelab">JavaScript</p>' : "") + '<pre class="codeans codeq">' + esc(p.cq) + "</pre>" : "");
   if (isChoice) {
     var multi = isMulti(p), sel = view.sel || [];
     if (multi) h += '<p class="sub msel">' + p.ks.length + "つ選びなさい(全部合っていれば正解)</p>";
