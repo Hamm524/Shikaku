@@ -7,7 +7,7 @@ var SUBJECTS = [
   { id: "boki", name: "日商簿記2級", short: "簿記", title: "簿記2級ドリル", units: typeof BOKI !== "undefined" ? BOKI : null, def: "2026-12-18", order: typeof BOKI_ORDER !== "undefined" ? BOKI_ORDER : null, unk: true, gloss: typeof BOKI_GLOSS !== "undefined" ? BOKI_GLOSS : null, glossLong: true, kinds: [["net", "ネット試験"], ["paper", "統一試験(紙)"]] },
   { id: "itpass", name: "ITパスポート", short: "ITパス", title: "ITパスポートドリル", unk: true, units: typeof ITPASS !== "undefined" ? ITPASS : null, note: "問題は順に増やしています。", exam: { mins: 120, pass: { total: 0.6, part: 0.3 }, parts: [{ name: "ストラテジ系", ids: ["ip1"], n: 34 }, { name: "マネジメント系", ids: ["ip2"], n: 20 }, { name: "テクノロジ系", ids: ["ip3", "ip4"], n: 46 }] } },
   { id: "html5", name: "HTML5プロフェッショナル レベル1", short: "HTML5 Lv1", title: "HTML5 レベル1ドリル", unk: true, goal: 70, gloss: typeof GLOSS_L1 !== "undefined" ? GLOSS_L1 : null, mocks: typeof HTML5_L1_MOCKS !== "undefined" ? HTML5_L1_MOCKS : null, mockInfo: "本番と同じ約60問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、60問ずつ選びました(3回で重なりません)。時間を計って、通しで解いてみましょう。合格の目安は7割です(公式の合格点ではありません)。", units: typeof HTML5_L1 !== "undefined" ? HTML5_L1 : null, note: "公式の出題範囲(Ver2.5)に沿った問題です。記述問題は、書いたあとに模範解答と見比べて採点します。合格の目安は7割です(公式の合格点ではありません)。" },
-  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, mocks: typeof HTML5_L2_MOCKS !== "undefined" ? HTML5_L2_MOCKS : null, mockInfo: "本番と同じ40〜45問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、45問ずつ選びました(「Selectors・History・デバッグ」は問題が少ないため、3回で一部の問題が重なります)。時間を計って、通しで解いてみましょう。", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
+  { id: "html5lv2", name: "HTML5プロフェッショナル レベル2", short: "HTML5 Lv2", title: "HTML5 レベル2ドリル", unk: true, gloss: typeof GLOSS_L2 !== "undefined" ? GLOSS_L2 : null, mocks: typeof HTML5_L2_MOCKS !== "undefined" ? HTML5_L2_MOCKS : null, mockInfo: "本番と同じ40〜45問・試験時間80分", mockDesc: "公式の出題の比率に近づけて、45問ずつ選びました(「Selectors・History・デバッグ」は問題が少ないため、3回で一部の問題が重なります)。時間を計って、通しで解いてみましょう。", units: typeof HTML5 !== "undefined" ? HTML5 : null, note: "公式の出題範囲(Ver2.5)の順に、問題を増やしています。コードを読む問題の答えは、実際に動かして確かめています。「要素と文書構造」「フォーム・CSS・JavaScript」はサンプルの問題です。記述問題は、書いたあとに模範解答と見比べて採点します。" }
 ].filter(function (s) { return s.units && (!ONLY || s.id === ONLY); });
 var ROOT = ONLY ? "../" : "";
 var UNITS = [];
@@ -171,7 +171,7 @@ function glossHTML(u, p) {
   var S = u && subjById(u.subj), g = S && S.gloss;
   if (!g) return "";
   if (S.glossLong) return glossBox(glossLong(g, [p.q].concat(p.c || [], p.a || []).join(" "), 5));
-  var text = [p.q].concat(p.c || [], [p.code || ""]).join(" "), plain = text.replace(/HTTPS/g, ""), out = [];
+  var text = [p.t || "", p.q].concat(p.c || [], [p.code || "", p.cq || "", p.hq || ""]).join(" "), plain = text.replace(/HTTPS/g, ""), out = [];
   g.forEach(function (e) {
     if (out.length >= 4) return;
     var hit = e.k.some(function (k) { return (k === "HTTP" ? plain : text).indexOf(k) >= 0; });
