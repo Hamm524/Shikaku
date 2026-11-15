@@ -256,7 +256,7 @@ function go(name, extra) {
   for (var k in extra) view[k] = extra[k];
   view.name = name;
   if (name !== "quiz") usFreeze();
-  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; view.mark = ""; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
+  if (name === "quiz" && extra && extra.revealed === false) { view.picked = -1; view.sel = []; view.mark = ""; resetTimer(); view.waiting = gateOn(view.unit); if (view.waiting) view.running = false; }
   render(); window.scrollTo(0, 0);
 }
 function render() {
@@ -672,19 +672,26 @@ function renderQuiz() {
     : '<div class="timerrow"><span class="tm" id="tm" role="timer">' + fmt(curElapsed()) + '</span><span class="target">目安 ' + fmtMin(target) + (took ? "(前回 " + fmt(took * 1000) + ")" : "") + '</span><button class="link" data-act="tpause" id="tpause">' + (view.running ? "一時停止" : "再開") + "</button></div>";
   h += '<article class="card">' + (u.lv ? '<em class="lv lv-' + u.lvc + '">' + esc(u.lv) + "</em>" : "") + '<span class="tag">問' + (idx + 1) + (u.mock && u.ut ? "" : " " + esc(p.t)) + "</span>" + (p.vx ? '<em class="lv lv-vx">数字を変えた問題</em>' : "") + timer + (p.lvx ? '<div class="lvnote lv-e"><b>範囲外かも</b> ' + esc(p.lvx) + "</div>" : "") + '<p class="qtext">' + esc(p.q) + "</p>" + (p.hq ? '<p class="sub codelab">HTML</p><pre class="codeans codeq">' + esc(p.hq) + "</pre>" : "") + (p.cq ? (p.hq ? '<p class="sub codelab">JavaScript</p>' : "") + '<pre class="codeans codeq">' + esc(p.cq) + "</pre>" : "");
   if (isChoice) {
+    var multi = isMulti(p), sel = view.sel || [];
+    if (multi) h += '<p class="sub msel">' + p.ks.length + "つ選びなさい(全部合っていれば正解)</p>";
     h += '<div class="choices" role="group" aria-label="選択肢">';
     p.c.forEach(function (c, n) {
       var cls = "choice";
-      if (view.revealed) cls += n === p.k ? " right" : n === view.picked ? " wrong" : "";
-      h += '<button class="' + cls + '" data-act="pick" data-n="' + n + '"' + (view.revealed ? " disabled" : "") + '><span class="cn">' + (n + 1) + "</span><span>" + esc(c) + "</span></button>";
+      if (multi) {
+        if (view.revealed) cls += p.ks.indexOf(n) >= 0 ? " right" : sel.indexOf(n) >= 0 ? " wrong" : "";
+        else if (sel.indexOf(n) >= 0) cls += " sel";
+      } else if (view.revealed) cls += n === p.k ? " right" : n === view.picked ? " wrong" : "";
+      h += '<button class="' + cls + '" data-act="' + (multi ? "mpick" : "pick") + '" data-n="' + n + '"' + (multi && !view.revealed ? ' aria-pressed="' + (sel.indexOf(n) >= 0) + '"' : "") + (view.revealed ? " disabled" : "") + '><span class="cn">' + (n + 1) + "</span><span>" + esc(c) + "</span></button>";
     });
     h += "</div>";
+    if (multi && !view.revealed) h += '<button class="btn primary" data-act="mcheck"' + (sel.length ? "" : " disabled") + ">答え合わせ(" + sel.length + "/" + p.ks.length + "つ選択中)</button>";
     if (view.revealed) {
-      if (view.mark === "unk") h += '<p class="verdict bad">わからない → 復習に入れました。正解は ' + (p.k + 1) + " 番です。解説を読んで、覚えましょう。</p>";
+      var good = multi ? multiOk(p, sel) : view.picked === p.k, ans = multi ? p.ks.map(function (x) { return x + 1; }).join("・") + " 番" : (p.k + 1) + " 番";
+      if (view.mark === "unk") h += '<p class="verdict bad">わからない → 復習に入れました。正解は ' + ans + "です。解説を読んで、覚えましょう。</p>";
       else if (view.mark === "guess") h += '<p class="verdict bad">当てずっぽう → 復習に入れました。解説を読んで、覚えましょう。</p>';
       else {
-        h += '<p class="verdict ' + (view.picked === p.k ? "good" : "bad") + '">' + (view.picked === p.k ? "○ 正解です" : "× 不正解です。正解は " + (p.k + 1) + " 番") + "</p>";
-        if (view.picked === p.k && unkOn(u)) h += '<button class="btn" data-act="guess">当てずっぽうだった(復習に入れる)</button>';
+        h += '<p class="verdict ' + (good ? "good" : "bad") + '">' + (good ? "○ 正解です" : "× 不正解です。正解は " + ans) + "</p>";
+        if (good && unkOn(u)) h += '<button class="btn" data-act="guess">当てずっぽうだった(復習に入れる)</button>';
       }
     }
   } else {
@@ -735,6 +742,22 @@ function renderDone() {
     '<p class="sub">' + (ng ? "× の問題が" + ng + "問あります。解説を読んでから、もう一度解いてみましょう。" : "すべて○です。次の単元に進みましょう。") + "</p>" +
     '<div class="row">' + (ng ? '<button class="btn primary" data-act="retry">× だけ解き直す</button>' : "") + '<button class="btn" data-act="restart">最初から解く</button><button class="btn" data-act="home">一覧へ</button></div></div>';
   app.innerHTML = h; bar.hidden = true;
+}
+function isMulti(p) { return !!(p && p.ks && p.ks.length); }
+function multiOk(p, sel) { return sel.length === p.ks.length && p.ks.every(function (x) { return sel.indexOf(x) >= 0; }); }
+function doMPick(n) {
+  if (view.revealed) return;
+  var sel = view.sel || (view.sel = []), i = sel.indexOf(n);
+  if (i >= 0) sel.splice(i, 1); else sel.push(n);
+  render();
+}
+function doMCheck() {
+  if (view.revealed) return;
+  var u = view.unit, idx = view.list[view.pos], p = u.ps[idx];
+  if (!isMulti(p) || !(view.sel || []).length) return;
+  view.elapsed = curElapsed(); view.running = false; view.revealed = true;
+  recordResult(rkey(u, idx), multiOk(p, view.sel)); store.time[rkey(u, idx)] = Math.round(view.elapsed / 1000); save();
+  render();
 }
 function doPick(n) {
   if (view.revealed) return;
@@ -963,6 +986,8 @@ function handle(e) {
   else if (act === "unk") doUnknown();
   else if (act === "guess") doGuess();
   else if (act === "pick") doPick(+t.getAttribute("data-n"));
+  else if (act === "mpick") doMPick(+t.getAttribute("data-n"));
+  else if (act === "mcheck") doMCheck();
   else if (act === "grade") doGrade(+t.getAttribute("data-v"));
   else if (act === "prev") move(-1);
   else if (act === "next") move(1);
@@ -1033,7 +1058,8 @@ document.addEventListener("keydown", function (e) {
   if (e.key === "Escape") go("home", {});
   else if (e.key === "ArrowLeft") move(-1);
   else if (e.key === "ArrowRight") move(1);
-  else if (p.c && !view.revealed && /^[1-4]$/.test(e.key) && +e.key <= p.c.length) doPick(+e.key - 1);
+  else if (p.c && !view.revealed && /^[1-9]$/.test(e.key) && +e.key <= p.c.length) { if (isMulti(p)) doMPick(+e.key - 1); else if (+e.key <= 4) doPick(+e.key - 1); }
+  else if (isMulti(p) && !view.revealed && e.key === "Enter") doMCheck();
   else if (!view.revealed && e.key === "0" && unkOn(view.unit) && !p.pt) doUnknown();
   else if (p.c && view.revealed && e.key === "Enter") move(1);
   else if (!p.c && !view.revealed && e.key === "Enter") { e.preventDefault(); doReveal(); }
