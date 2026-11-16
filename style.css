@@ -316,3 +316,21 @@ details.step:not(.cur) { background: transparent; }
 .gq { width: 100%; box-sizing: border-box; padding: 13px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 16px; background: var(--surface); color: inherit; }
 .glist { margin-top: 8px; }
 .glist dl[hidden] { display: none; }
+
+/* 学習計画: カレンダー */
+.cal { gap: 10px; }
+.calnav { display: flex; justify-content: space-between; align-items: center; }
+.calnav .btn { min-width: 44px; padding: 6px 12px; }
+.calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.calw { text-align: center; font-size: .75rem; color: var(--ink-soft); }
+.calw.su { color: var(--ng); }
+.calc { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1px; min-height: 52px; padding: 4px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; cursor: pointer; }
+.calc b { font-size: .9rem; }
+.calc small, .calc em { font-size: .65rem; font-style: normal; color: var(--ink-soft); line-height: 1.2; }
+.calc em { color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: 0 4px; font-weight: 700; }
+.calc.ex2 em { background: var(--ink-soft); color: var(--surface); }
+.calc.off { background: var(--bg); color: var(--ink-soft); }
+.calc.out { opacity: .45; }
+.calc.today { border-color: var(--accent); border-width: 2px; }
+.calc.sel { background: var(--accent-tint); border-color: var(--accent); }
+.calsel { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }

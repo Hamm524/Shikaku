@@ -297,9 +297,22 @@ function getPlan(sid) {
   if (p) return p;
   return { exam: subjById(sid).def || "", daily: 120, off: [], dates: {} };
 }
+function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+var OTHER = { html5: ["html5lv2", "HTML5 Lv2"], html5lv2: ["html5", "HTML5 Lv1"] };
+function lv1Exam() { var q = store.plans.html5; return (q && q.exam) || ""; }
+function chained(sid, p) { return sid === "html5lv2" && p.chain !== false && !!lv1Exam(); }
+function planStart(sid, p) {
+  var t = today0();
+  if (chained(sid, p)) { var s = addDays(pd(lv1Exam()), 1); if (s > t) return s; }
+  return t;
+}
+function setExam(sid, date) {
+  var q = store.plans[sid] || (sid === view.subj ? getPlan(sid) : { exam: "", daily: 120, off: [], dates: {} });
+  q.exam = date; store.plans[sid] = q; save(); render();
+}
 function daysLeft(p) { return p.exam ? Math.max(0, Math.round((pd(p.exam) - today0()) / 86400000)) : 0; }
 function studyDays(p) {
-  var t = today0(), days = [];
+  var t = planStart(view.subj, p), days = [];
   if (!p.exam) return days;
   var ex = pd(p.exam);
   for (var d = new Date(t); d < ex; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) { if (p.off.indexOf(d.getDay()) < 0) days.push(fd(d)); }
@@ -323,6 +336,36 @@ function planEntries(sid) {
   out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   return out;
 }
+function renderCal(sid, p, es) {
+  var S = subjById(sid), td = today0(), C = view.cal;
+  if (!C) { var b = p.exam ? pd(p.exam) : td; C = view.cal = { y: b.getFullYear(), m: b.getMonth(), sel: "" }; }
+  var nd = new Date(C.y, C.m + 1, 0).getDate(), lead = new Date(C.y, C.m, 1).getDay(), tdy = fd(td), st = fd(planStart(sid, p)), load = {}, oth = OTHER[sid], ox = oth && store.plans[oth[0]] && store.plans[oth[0]].exam || "", i;
+  es.forEach(function (e) { load[e.date] = (load[e.date] || 0) + e.mins; });
+  var h = '<div class="card cal"><div class="calnav"><button class="btn" data-act="calnav" data-d="-1" aria-label="前の月">‹</button><strong>' + C.y + "年" + (C.m + 1) + '月</strong><button class="btn" data-act="calnav" data-d="1" aria-label="次の月">›</button></div><div class="calgrid">';
+  for (i = 0; i < 7; i++) h += '<span class="calw' + (i === 0 ? " su" : i === 6 ? " sa" : "") + '">' + W[i] + "</span>";
+  for (i = 0; i < lead; i++) h += "<span></span>";
+  for (i = 1; i <= nd; i++) {
+    var d = new Date(C.y, C.m, i), ds = fd(d), cls = "calc", tag = "";
+    if (ds === tdy) cls += " today";
+    if (p.off.indexOf(d.getDay()) >= 0) cls += " off";
+    if (ds < st || (p.exam && ds > p.exam)) cls += " out";
+    if (ds === C.sel) cls += " sel";
+    if (p.exam && ds === p.exam) { cls += " exam"; tag = "試験"; }
+    else if (ox && ds === ox) { cls += " ex2"; tag = oth[1].replace("HTML5 ", "") + "試験"; }
+    h += '<button class="' + cls + '" data-act="calsel" data-date="' + ds + '"><b>' + i + "</b>" + (tag ? "<em>" + esc(tag) + "</em>" : load[ds] ? "<small>" + Math.round(load[ds]) + "分</small>" : "") + "</button>";
+  }
+  h += "</div>";
+  if (C.sel) {
+    var ents = es.filter(function (e) { return e.date === C.sel; });
+    h += '<div class="calsel"><strong>' + jd(C.sel) + "</strong>";
+    if (ents.length) ents.forEach(function (e) { h += '<span class="sub">' + esc(e.u.name) + "(約" + Math.round(e.mins) + "分)</span>"; });
+    else h += '<span class="sub">この日の予定はありません。</span>';
+    h += '<button class="btn primary" data-act="calexam" data-sid="' + sid + '">この日を ' + esc(S.short) + " の受験日にする</button>";
+    if (oth) h += '<button class="btn" data-act="calexam" data-sid="' + oth[0] + '">この日を ' + esc(oth[1]) + " の受験日にする</button>";
+    h += "</div>";
+  } else h += '<p class="sub">日付を押すと、その日の予定が見られて、受験日にも設定できます。</p>';
+  return h + "</div>";
+}
 function renderPlan() {
   var sid = view.subj, S = subjById(sid), p = getPlan(sid), days = studyDays(p), n = days.length, need = 0, i;
   S.units.forEach(function (u) { if (counts(u).rest > 0) need += remMins(u) * 2; });
@@ -341,7 +384,15 @@ function renderPlan() {
   for (i = 30; i <= 420; i += 30) h += '<option value="' + i + '"' + (i === p.daily ? " selected" : "") + ">" + (i < 60 ? "30分" : Math.floor(i / 60) + "時間" + (i % 60 ? "30分" : "")) + "</option>";
   h += '</select></label><div class="fld"><span>休む曜日</span><div class="offs">';
   for (i = 0; i < 7; i++) h += '<label class="chk"><input type="checkbox" data-pf="off" data-d="' + i + '"' + (p.off.indexOf(i) >= 0 ? " checked" : "") + ">" + W[i] + "</label>";
-  h += '</div></div><button class="btn primary" data-act="autoplan">この条件で予定を組む</button></div>';
+  h += "</div></div>";
+  if (sid === "html5lv2") {
+    if (lv1Exam()) h += '<label class="chk"><input type="checkbox" data-pf="chain"' + (p.chain !== false ? " checked" : "") + ">レベル1の受験日(" + jd(lv1Exam()) + ")の翌日から、レベル2を始める</label>";
+    else h += '<p class="sub">レベル1を先に受ける場合は、下のカレンダーで、レベル1の受験日を選んでください。レベル2は、その翌日から始める計画になります。</p>';
+  } else if (sid === "html5" && store.plans.html5lv2 && store.plans.html5lv2.exam) h += '<p class="sub">レベル2の受験日は ' + jd(store.plans.html5lv2.exam) + " です(レベル2の計画は、このレベル1の受験日の翌日から始まります)。</p>";
+  h += '<button class="btn primary" data-act="autoplan">この条件で予定を組む</button></div>';
+  h += renderCal(sid, p, planEntries(sid));
+  if (chained(sid, p) && p.exam && planStart(sid, p) >= pd(p.exam)) h += '<div class="warnbox"><b>レベル1の受験日が、レベル2の受験日と同じか、あとになっています</b><span>日付を見直してください。</span></div>';
+  else if (chained(sid, p) && planStart(sid, p) > today0()) h += '<p class="sub">レベル2の勉強は ' + jd(fd(planStart(sid, p))) + " から始める計画です(それまでは、レベル1に集中します)。</p>";
   if (!p.exam) h += '<p class="sub">受験日を入れてください。まだ決まっていなければ、目標の日でも構いません。</p>';
   else {
     var ok = avail >= need;
@@ -383,6 +434,7 @@ function onChange(e) {
   var sid = view.subj, p = getPlan(sid); store.plans[sid] = p;
   if (f === "exam") p.exam = t.value || "";
   else if (f === "kind") p.kind = t.value;
+  else if (f === "chain") p.chain = t.checked;
   else if (f === "daily") p.daily = +t.value;
   else if (f === "off") { var d = +t.getAttribute("data-d"), k = p.off.indexOf(d); if (t.checked && k < 0) p.off.push(d); if (!t.checked && k >= 0) p.off.splice(k, 1); }
   else if (f === "date") { var id = t.getAttribute("data-id"); if (t.value) p.dates[id] = t.value; else delete p.dates[id]; }
@@ -979,6 +1031,9 @@ function handle(e) {
   else if (act === "plan") go("plan", {});
   else if (act === "subj") { view.subj = t.getAttribute("data-id"); lset("shk_subj", view.subj); render(); }
   else if (act === "psubj") { view.subj = t.getAttribute("data-id"); lset("shk_subj", view.subj); render(); }
+  else if (act === "calnav") { var C0 = view.cal, y0 = window.scrollY; C0.m += +t.getAttribute("data-d"); if (C0.m < 0) { C0.m = 11; C0.y--; } if (C0.m > 11) { C0.m = 0; C0.y++; } render(); window.scrollTo(0, y0); }
+  else if (act === "calsel") { var y1 = window.scrollY; view.cal.sel = t.getAttribute("data-date"); render(); window.scrollTo(0, y1); }
+  else if (act === "calexam") { var y2 = window.scrollY; setExam(t.getAttribute("data-sid"), view.cal.sel); window.scrollTo(0, y2); }
   else if (act === "autoplan") { var pp = getPlan(view.subj); pp.dates = autoPlan(view.subj, pp); store.plans[view.subj] = pp; save(); render(); }
   else if (act === "jump") go("quiz", { pos: +t.getAttribute("data-n"), revealed: false });
   else if (act === "tpause") {
